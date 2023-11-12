@@ -4,6 +4,7 @@ import math
 import pandas as pd
 import scipy.stats as stats
 import matplotlib.pyplot as plt
+import warnings
 
 
 #####
@@ -30,12 +31,12 @@ def calculate_alleles_probabilities(alleles_count):
 
 # generate a marginal probabilities matrix
 # column i represent the probabilities p_i(j), j are for the rows
-# def calculate_marginal_probabilities(alleles_count):
-#     probs = np.zeros(shape=(alleles_count, alleles_count))
-#     for i_ in range(alleles_count):
-#         marginal = calculate_alleles_probabilities(alleles_count)
-#         probs[:, i_] = marginal
-#     return probs
+def calculate_marginal_probabilities(alleles_count):
+    probs = np.zeros(shape=(alleles_count, alleles_count))
+    for i_ in range(alleles_count):
+        marginal = calculate_alleles_probabilities(alleles_count)
+        probs[:, i_] = marginal
+    return probs
 
 
 # data: N x 2, row = (j, k). alleles j,k
@@ -51,12 +52,12 @@ def count_row_occurrence_in_2d_array(j, k, data):
     return count
 
 
-# def calculate_probability_given_i_j(marginal_probabilities_, i_, j_, k_1, k_2):
-#     prob = marginal_probabilities_[k_1, i_] * marginal_probabilities_[k_2, j_]
-#     # EVEN
-#     if i_ != j_:
-#         prob += marginal_probabilities_[k_1, j_] * marginal_probabilities_[k_2, i_]
-#     return prob
+def calculate_probability_given_i_j(marginal_probabilities_, i_, j_, k_1, k_2):
+    prob = marginal_probabilities_[k_1, i_] * marginal_probabilities_[k_2, j_]
+    # EVEN
+    if i_ != j_:
+        prob += marginal_probabilities_[k_1, j_] * marginal_probabilities_[k_2, i_]
+    return prob
 
 
 # calculate the denominator for the new Chi-Squared test
@@ -128,6 +129,7 @@ def calculate_total_variance_alleles_i_j(alleles_amount_,
 # need to calculate only on the upper triangle because the matrices are symmetric
 def calculate_chi_squared_value(counts_expected_, counts_observed_, counts_total_variance_, should_use_new_test_):
     value = 0
+    count_small_variance = 0
     for row in range(counts_expected_.shape[0]):
         for col in range(row, counts_expected_.shape[1]):
             expected_ = counts_expected_[row, col]
@@ -135,10 +137,14 @@ def calculate_chi_squared_value(counts_expected_, counts_observed_, counts_total
             variance_ = counts_total_variance_[row, col]
             if should_use_new_test_:
                 denominator = variance_
+                if variance_ < 2:
+                    count_small_variance += 1
+                    continue
             else:
                 denominator = expected_
+            # print(denominator)
             value += (((expected_ - observed_) ** 2) / denominator)
-    return value
+    return value, count_small_variance
 
 
 # A i_hat,j_hat = p_i(i_hat) * p_j(j_hat). each element (k,l) represent to probability to get (k,l) alleles
@@ -164,7 +170,6 @@ def prepare_probabilities(alleles_count):
 
 def run_experiment(alleles_count, population_amount, alpha_val, uncertainty_val,
                    alleles_probabilities, should_use_new_test_):
-
     probabilities = np.zeros(shape=(alleles_count, alleles_count))
     for t in range(alleles_count):
         for m in range(t, alleles_count):
@@ -184,9 +189,8 @@ def run_experiment(alleles_count, population_amount, alpha_val, uncertainty_val,
     # print(f' marginal: {marginal_probabilities}')
 
     # 1) assignment of alleles with certainty
+    probabilities_list = probabilities.flatten()
     for k in range(population_amount):
-        probabilities_list = probabilities.flatten()
-
         # notice the alleles i != j have probability 2 * p(i,j)
         index = random.choices(population=range(len(probabilities_list)), weights=probabilities_list, k=1)[0]
         # the right allele of this index element
@@ -262,21 +266,34 @@ def run_experiment(alleles_count, population_amount, alpha_val, uncertainty_val,
     counts_total_variance = np.zeros((alleles_count, alleles_count))
     for k in range(alleles_count):
         for j in range(k, alleles_count):
-            total_variance = calculate_total_variance_alleles_i_j(alleles_count,
-                                                                  population_amount,
-                                                                  alleles_probabilities,
-                                                                  uncertainty_val,
-                                                                  observations,
-                                                                  sum_observed,
-                                                                  k, j)
+            mean = sum(all_probabilities[k, j, :]) / population_amount
+            total_variance = sum((all_probabilities[k, j, t] - mean) ** 2 for t in range(population_amount))
 
             counts_total_variance[k, j] = total_variance
-            counts_total_variance[j, k] = total_variance
 
-    chi_squared_stat = calculate_chi_squared_value(counts_expected_=counts_expected,
-                                                   counts_observed_=observations,
-                                                   counts_total_variance_=counts_total_variance,
-                                                   should_use_new_test_=should_use_new_test_)
+    # for t in range(alleles_count):
+    #     for m in range(t, alleles_count):
+    #         s = sum(all_probabilities[t, m, :])
+    #         if s == 0:
+    #             print(f'zero probability in alleles: {t}, {m}')
+    #             print(f'alleles probabilities: {alleles_probabilities}')
+    #             print(f' probabilities for 0,0: {all_probabilities[0,0,:]}')
+    #             print(f' probabilities for 0,1: {all_probabilities[0, 1, :]}')
+    #             print(f' probabilities for 1,1: {all_probabilities[1, 1, :]}')
+    #             print(f'probabilities: {probabilities}')
+    #             print(f'observed_probabilities: {observed_probabilities}')
+    #             raise ValueError('Now')
+
+    # print(counter_matrix)
+
+    chi_squared_stat_old, _ = calculate_chi_squared_value(counts_expected_=counts_expected,
+                                                          counts_observed_=observations,
+                                                          counts_total_variance_=counts_total_variance,
+                                                          should_use_new_test_=0)
+    chi_squared_stat_new, count_small_variance_ = calculate_chi_squared_value(counts_expected_=counts_expected,
+                                                                              counts_observed_=observations,
+                                                                              counts_total_variance_=counts_total_variance,
+                                                                              should_use_new_test_=1)
     dof = (alleles_count * (alleles_count + 1)) / 2 - 1
 
     # print(f' alpha for choice: {alpha_val}')
@@ -284,29 +301,32 @@ def run_experiment(alleles_count, population_amount, alpha_val, uncertainty_val,
 
     crit = stats.chi2.ppf(q=0.95, df=dof)
     # print(f'Critical value: {crit}')
-
-    p_value = 1 - stats.chi2.cdf(x=chi_squared_stat,
-                                 df=dof)
-    if p_value < 0.05:
-        return 1
-    return 0
+    p_value_old = 1 - stats.chi2.cdf(x=chi_squared_stat_old,
+                                     df=dof)
+    p_value_new = 1 - stats.chi2.cdf(x=chi_squared_stat_new,
+                                     df=dof - count_small_variance_)
+    return int(p_value_old < 0.05), int(p_value_new < 0.05)
 
 
 fix, ax = plt.subplots()
 ax.grid()
 ax.set_axisbelow(True)
 
-num_of_experiments = 400  # 500 amount of experiments for each alpha ranging from zero to one
+warnings.filterwarnings("error")
+
+num_of_experiments = 100  # 500 amount of experiments for each alpha ranging from zero to one
 alleles_amount = 10  # 2
-population_size = 400  # 35
+population_size = 1000  # 35
 interval_for_alpha = 0.04  # 0.02
 # uncertainty = 0.2
 uncertainty_vals = [0.0, 0.1, 0.2, 0.4]
 # blue color: 'royalblue'
 colors = ['royalblue', 'slategrey', 'limegreen', 'deeppink']
-alpha_values = np.arange(start=0, stop=1 + interval_for_alpha, step=interval_for_alpha)  # start, stop, step
+alpha_values = np.arange(start=0 + interval_for_alpha, stop=1 - interval_for_alpha,
+                         step=interval_for_alpha)  # start, stop, step
 # alpha_values = np.array([1.0])
-confidence_amounts_per_alpha = np.zeros((len(uncertainty_vals), alpha_values.shape[0]))
+confidence_amounts_per_alpha_old_test = np.zeros((len(uncertainty_vals), alpha_values.shape[0]))
+confidence_amounts_per_alpha_new_test = np.zeros((len(uncertainty_vals), alpha_values.shape[0]))
 should_use_new_test = 0
 # markers = ['', '>']
 markers = ['.', '>']
@@ -315,23 +335,31 @@ labels = ['Old Chi-Squared', 'Corrected Chi-Squared']
 # print(confidence_amounts_per_alpha.shape)
 alleles_probabilities_ = prepare_probabilities(alleles_count=alleles_amount)
 
-for should_use_new_test in range(2):
-    for uncertainty_index, uncertainty in enumerate(uncertainty_vals):
-        for i, alpha in enumerate(alpha_values):
-            counter = 0
+for uncertainty_index, uncertainty in enumerate(uncertainty_vals):
+    for i, alpha in enumerate(alpha_values):
+        counter_old_test = 0
+        counter_new_test = 0
 
-            for experiment in range(num_of_experiments):
-                counter += run_experiment(alleles_amount, population_size, alpha, uncertainty,
-                                          alleles_probabilities_, should_use_new_test)
-            print(f'uncertainty = {uncertainty}, alpha = {alpha}, test type = {should_use_new_test}')
-            confidence_amount = counter / num_of_experiments
-            confidence_amounts_per_alpha[uncertainty_index, i] = confidence_amount
+        for experiment in range(num_of_experiments):
+            result_old, result_new = run_experiment(alleles_amount, population_size, alpha, uncertainty,
+                                                    alleles_probabilities_, should_use_new_test)
+            counter_old_test += result_old
+            counter_new_test += result_new
+        print(f'uncertainty = {uncertainty}, alpha = {alpha}')
+        confidence_amount_old = counter_old_test / num_of_experiments
+        confidence_amount_new = counter_new_test / num_of_experiments
+        confidence_amounts_per_alpha_old_test[uncertainty_index, i] = confidence_amount_old
+        confidence_amounts_per_alpha_new_test[uncertainty_index, i] = confidence_amount_new
 
-        print(confidence_amounts_per_alpha[uncertainty_index, :])
-        plt.plot(alpha_values, confidence_amounts_per_alpha[uncertainty_index, :],
-                 label=f'{labels[should_use_new_test]}, uncertainty = {uncertainty}',
-                 marker=markers[should_use_new_test],
-                 color=colors[uncertainty_index])
+    # print(confidence_amounts_per_alpha[uncertainty_index, :])
+    plt.plot(alpha_values, confidence_amounts_per_alpha_old_test[uncertainty_index, :],
+             label=f'{labels[0]}, uncertainty = {uncertainty}',
+             marker=markers[0],
+             color=colors[uncertainty_index])
+    plt.plot(alpha_values, confidence_amounts_per_alpha_new_test[uncertainty_index, :],
+             label=f'{labels[1]}, uncertainty = {uncertainty}',
+             marker=markers[1],
+             color=colors[uncertainty_index])
 
 # print(confidence_amounts_per_alpha[-1])
 
@@ -340,5 +368,5 @@ plt.xlabel('Alpha values')
 plt.ylabel('Percentage of confidence amounts')
 plt.title('Old vs Corrected Chi-Squared')
 plt.legend()
-plt.savefig('chi_squared_simulation', pad_inches=0.2, bbox_inches="tight")
+plt.savefig('some_test', pad_inches=0.2, bbox_inches="tight")
 plt.show()

@@ -62,10 +62,12 @@ def calc_O_ij(population_amount, allele_count, alpha_val, alleles_probabilities,
     for i in range(allele_count):
         for j in range(i, allele_count):
             if i == j:
-                observed[i, j] = np.random.binomial(population_amount, get_p_ij(probabilities, i, j) * (1 + alpha_val))
+                p = (1 - alpha_val) * alleles_probabilities[i] + alpha_val * get_p_ij(probabilities, i, j)
+                observed[i, j] = np.random.binomial(population_amount, p)
             else:
+                p = alpha_val * get_p_ij(probabilities, i, j)
                 observed[i, j] = np.random.binomial(
-                    population_amount, get_p_ij(probabilities, i, j))
+                    population_amount, p)
     return observed
 
 
@@ -203,22 +205,33 @@ def binary_search(cdf, target: float = 0):
     return start
 
 
-def get_allele_from_cdf_dict(alleles_count, cdf_dict, observed, left_alleles: list):
+def get_allele_from_cdf_dict(alleles_count, cdf_dict, observed, left_alleles: list, should_update_dict=False):
     left_allele = left_alleles[1]
-    # update row in dict
-    update_row_in_cdf_dict(alleles_count, observed, cdf_dict, left_allele)
+
+    if should_update_dict:
+        # update row in dict
+        update_row_in_cdf_dict(alleles_count, observed, cdf_dict, left_allele)
 
     random_probability = np.random.uniform(0, 1)
     index = binary_search(cdf_dict[left_allele], random_probability)
-    # accessing the dict, then the list and then the right element of tuplef
+    # accessing the dict, then the list and then the right element of tuple
     right_allele = cdf_dict[left_allele][index][1]
 
     # counter = 0
     counter_for_recalculating_cdf_dict = 0
 
     if get_O_ij(observed, left_alleles[1], right_allele) <= 0:
-        raise ValueError('A very specific bad thing happened.')
+        # raise ValueError('A very specific bad thing happened.')
+        # update row in dict
+        update_row_in_cdf_dict(alleles_count, observed, cdf_dict, left_allele)
 
+        random_probability = np.random.uniform(0, 1)
+        index = binary_search(cdf_dict[left_allele], random_probability)
+        # accessing the dict, then the list and then the right element of tuple
+        right_allele = cdf_dict[left_allele][index][1]
+
+        if get_O_ij(observed, left_alleles[1], right_allele) <= 0:
+            raise ValueError('Cant find a non zero fr...')
 
         # o_ij = observed[min(left_allele, right_allele), max(left_allele, right_allele)]
         # print(f'O({left_allele},{right_allele}) = {o_ij}')
@@ -372,14 +385,25 @@ def update_current_delta_probability(list_probabilities: list, observed, alleles
         # z = np.log(population_amount_calculated * probabilities[i, j] / (1 - probabilities[i, j]))
         sign = couples[row, 2]
         val = 0
-        if sign == -1:
-            # val = np.log(observed[i, j] / (population_amount_calculated - observed[i, j] + 1)) \
-            #       + np.log((1 - get_p_ij(alleles_probabilities, i, j)) / get_p_ij(alleles_probabilities, i, j))
-            val = np.log(get_O_ij(observed, i, j)) - np.log(population_amount_calculated - get_O_ij(observed, i, j) + 1) \
-                  - np.log(get_p_ij(probabilities, i, j)) + np.log(1 - get_p_ij(probabilities, i, j))
-        elif sign == 1:
-            val = np.log(population_amount_calculated - get_O_ij(observed, i, j)) - np.log(get_O_ij(observed, i, j) + 1) \
-                  + np.log(get_p_ij(probabilities, i, j)) - np.log(1 - get_p_ij(probabilities, i, j))
+        try:
+            if sign == -1:
+                # val = np.log(observed[i, j] / (population_amount_calculated - observed[i, j] + 1)) \
+                #       + np.log((1 - get_p_ij(alleles_probabilities, i, j)) / get_p_ij(alleles_probabilities, i, j))
+                val = np.log(get_O_ij(observed, i, j)) - np.log(population_amount_calculated - get_O_ij(observed, i, j) + 1) \
+                      - np.log(get_p_ij(probabilities, i, j)) + np.log(1 - get_p_ij(probabilities, i, j))
+            elif sign == 1:
+                val = np.log(population_amount_calculated - get_O_ij(observed, i, j)) - np.log(get_O_ij(observed, i, j) + 1) \
+                      + np.log(get_p_ij(probabilities, i, j)) - np.log(1 - get_p_ij(probabilities, i, j))
+        except RuntimeWarning:
+            print(f'''
+i,j: {i}, {j}.
+O_ij: {get_O_ij(observed, i, j)}
+population calculated: {population_amount_calculated}
+p_ij: {get_p_ij(probabilities, i, j)}
+sign: {sign}
+observations: {observed}
+alleles probabilities: {alleles_probabilities}''')
+            raise ValueError('A very specific bad thing happened.')
 
 
         # print(observed)
@@ -393,7 +417,8 @@ def update_current_delta_probability(list_probabilities: list, observed, alleles
 
 
 # calculate the starting index for the gibbs sampling
-def calculate_start_time(alleles_count, population_amount, alleles_probabilities, observed, cdf_dict):
+def calculate_start_time(alleles_count, population_amount, alleles_probabilities, observed, observed_cdf, iterations):
+    observed_cdf = [np_array / sum(np_array) for np_array in observed_cdf]
     start_time = 0.0
     for i in range(alleles_count):
         for j in range(i, alleles_count):
@@ -402,13 +427,16 @@ def calculate_start_time(alleles_count, population_amount, alleles_probabilities
                 mult = 2
             val = observed[i, j] - mult * population_amount * alleles_probabilities[i] * alleles_probabilities[j]
             if val >= 0:
-                val = abs(val) * cdf_dict[i][j][0] * (1 - alleles_probabilities[j])
+                val = abs(val) * observed_cdf[i][j] * (1 - alleles_probabilities[j])
             else:
-                val = abs(val) * (1 - cdf_dict[i][j][0]) * alleles_probabilities[j]
-            start_time += val
-    return int(start_time)
-
-    pass
+                val = abs(val) * (1 - observed_cdf[i][j]) * alleles_probabilities[j]
+            start_time += abs(val)
+    start_time = int(start_time)
+    if start_time > 50000:
+        return 50000
+    if start_time < 10000:
+        return 10000
+    return start_time
 
 
 def debug_observed(observed):

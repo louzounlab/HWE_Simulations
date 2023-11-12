@@ -1,293 +1,157 @@
-import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
 import numpy as np
-import random
+import csv
 
-import utils
-import utils_with_certainty
-
-
-# def binary_search(cdf, target: float = 0):
-#     start = 0
-#     end = len(cdf) - 1
-#     while end > start + 1:
-#         mid = (end + start) // 2
-#         # print(f'start: {start}. mid: {mid}. end: {end}')
-#         if cdf[mid] < target:
-#             start = mid
-#         elif (cdf[mid] >= target) and (mid > 0) and (cdf[mid - 1] >= target):
-#             end = mid
-#         elif cdf[mid] >= target:
-#             return mid
-#     # now start and end pointing to the elements closest to 0
-#     # pick the index of the closer one
-#     return end
+# level = 'A'
+# race = 'AFA'
 #
+# path = f'data/real_data_test/levels/{level}/races/{race}'
 #
-# test_space = [([0.3, 0.4, 0.5], 0.49, 2),
-#               ([0.4, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.7, 1.0, 1.0], 0.4001, 1),
-#               ([0.3, 0.4, 0.5], 0.5, 2),
-#               ([0.4, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.7, 1.0, 1.0], 0.5, 1),
-#               ([0.7, 0.7, 0.7, 0.8, 0.81, 0.82, 0.83, 0.83, 1.0], 0.83, 6),
-#               ([0.7, 0.7, 0.7, 0.8, 0.81, 0.82, 0.83, 0.83, 1.0], 0.820000005, 6),
-#               ([0.3, 0.3, 0.5, 0.6, 0.6, 0.6], 0.6, 3),
-#               ([0.3, 0.3, 0.5, 0.6, 0.6, 0.6], 0.59, 3)
-#               ]
-# for i, test in enumerate(test_space):
-#     index = binary_search(test[0], target=test[1])
-#     if index != test[2]:
-#         print('nope')
-
-# data = pd.read_csv('data/means_alpha=00', index_col=0)
-# plt.figure(figsize=(12, 10))
-# sns.heatmap(data, annot=True, cmap=plt.cm.CMRmap_r)
-# plt.xlabel('Population')
-# plt.ylabel('Alleles')
-# plt.title('Mean of % positive results')
-# plt.show()
-
-# data = pd.read_csv('data/stds_alpha=00', index_col=0)
-# plt.figure(figsize=(12, 10))
-# sns.heatmap(data, annot=True, cmap=plt.cm.CMRmap_r)
-# plt.xlabel('Population')
-# plt.ylabel('Alleles')
-# plt.title('Stds of % positive results')
-# plt.show()
-
-# data = pd.read_csv('data/positives_for_alpha_values_alleles=100_population=10000000', index_col=0)
-# alleles_count_ = 100
-# population_amount_ = 10000000
-# interval_for_alpha = 0.125
+# ambiguity_df = pd.read_csv(f'{path}/uncertainty',
+#                            dtype={'id': str, 'uncertainty': float})
+# i_j_probability_df = pd.read_csv(f'{path}/id_allele1_allele2_probability',
+#                                  dtype={'id': str, 'allele_1': int, 'allele_2': int, 'probability': float})
+# id_sum_df = pd.read_csv('data/real_data_test/races/AFA/id_sum',
+#                         dtype={'id': str, 'sum': float})
+# print(ambiguity_df.shape[0])
+# print(i_j_probability_df.shape[0])
+# print(id_sum_df.shape[0])
 #
-# plot_means = data.iloc[:, 0]
-# plot_stds = data.iloc[:, 1]
-# print(plot_means)
-# print(type(plot_means))
+# i_j_probability_B_df = pd.read_csv(f'data/real_data_test/levels/B/races/{race}/id_allele1_allele2_probability',
+#                                  dtype={'id': str, 'allele_1': int, 'allele_2': int, 'probability': float})
+# print(i_j_probability_B_df.shape[0])
+
+# first read all the rows and get indices of ids and alleles and amounts
+# with open('profiles1.csv', encoding="utf8") as infile:
+#     reader = csv.reader(infile)
+#     lst = next(reader)
 #
-# alpha_values = np.arange(start=0.0, stop=1.0 + interval_for_alpha, step=interval_for_alpha)
-# plt.errorbar(alpha_values, plot_means, plot_stds)
-# plt.xlabel('Alpha values')
-# plt.ylabel('% Positives')
-# plt.title(f'Alleles: {alleles_count_}. Population: {population_amount_}')
-# plt.show()
-
-def search(cdf, target: float = 0):
-    for i in range(len(cdf)):
-        if cdf[i] >= target:
-            return i
-
-
-def binary_search(cdf, target: float = 0):
-    start = 0
-    end = len(cdf)
-    while start < end:
-        mid = (end + start) // 2
-        # print(f'start: {start}. mid: {mid}. end: {end}')
-        if cdf[mid] < target:
-            start = mid + 1
-        else:
-            end = mid
-    # now start and end pointing to the elements closest to 0
-    # pick the index of the closer one
-    return start
-
-
-# dtypes = {'allele': str, 'index': int}
-# df = pd.read_csv('data/real_data/levels/A/alleles_indices',
-#                  dtype=dtypes)
-# print(df.set_index('allele').T.to_dict('list'))
-
-# races_df = pd.read_csv('data/id_race_don_us.csv',
-#                        dtype={'id': str, 'rcae': str})
-# print(races_df.head())
-# races_dict = {}
-# for i in range(len(races_df)):
-#     print(i)
-#     id = races_df.loc[i, 'id']
-#     race = races_df.loc[i, 'rcae']
-#     if id not in races_dict:
-#         races_dict[id] = race
-# print(races_dict)
-
-# df = pd.read_csv('data/id_race_don_us.csv')
-# ids_amount = len(df)
-# print(f'amount of ids: {ids_amount}')
+#     name_col = lst[0]
+#     age_col = lst[1]
+#     country_col = lst[2]
 #
-# races_set = utils.RACES_SET
-# count = 0
-# for race in races_set:
-#     my_df = pd.read_csv(f'data/real_data/races/{race}/id_amount')
-#     count += len(my_df)
-# print(f'check: {count}')
-
-# my_dict = {'1': {'i': 1, 'j': 3},
-#            '2': {'i': 5, 'j': 7}}
-# print(list(my_dict.values()))
+# df = pd.read_csv('profiles1.csv',
+#                  dtype={name_col: str, age_col: int, country_col: str})
+# id_col = df.columns[0]
+# df = df.sort_values(by=id_col)
+# print(df.loc[0])
+# print(df.columns[0])
 
 level = 'A'
-race = 'AFA'
-# df = pd.read_csv(f'data/real_data/levels/{level}/races/{race}/i_j_probability')
-# sum_prob = 0.0
-# for index, row in df.iterrows():
+race = 'HIS'
+from models import chi_squared
+real_data_path = 'data/real_data_test'
+probabilities_path = f'{real_data_path}/levels/{level}/races/{race}/id_allele1_allele2_probability'
+
+id_to_index = {}
+allele_to_index = {}
+# first read all the rows and get indices of ids and alleles and amounts
+with open(probabilities_path, encoding="utf8") as infile:
+    for index, line in enumerate(infile):
+        # header
+        if index == 0:
+            continue
+        if index % 10000 == 0:
+            print(f'row: {index}, level: {level}, race: {race}, preprocessing')
+        lst = line.strip('\n').split(',')
+
+        id = lst[0]
+        allele_1 = int(lst[1])
+        allele_2 = int(lst[2])
+        probability = float(lst[3])
+
+        if id not in id_to_index:
+            id_to_index[id] = len(id_to_index)
+
+        if allele_1 not in allele_to_index:
+            allele_to_index[allele_1] = len(allele_to_index)
+        if allele_2 not in allele_to_index:
+            allele_to_index[allele_2] = len(allele_to_index)
+
+# first read all the rows and get indices of ids and alleles and amounts
+# for index, row in df_id_allele1_allele2_prob.iterrows():
+#     if index % 10000 == 0:
+#         print(f'row: {index}, level: {level}, race: {race}, preprocessing')
+#     id = row['id']
+#     allele_1 = row['allele_1']
+#     allele_2 = row['allele_2']
 #     probability = row['probability']
-#     sum_prob += probability
 #
-# print(sum_prob)
+#     if id not in id_to_index:
+#         id_to_index[id] = len(id_to_index)
+#
+#     if allele_1 not in allele_to_index:
+#         allele_to_index[allele_1] = len(allele_to_index)
+#     if allele_2 not in allele_to_index:
+#         allele_to_index[allele_2] = len(allele_to_index)
 
-# df = pd.read_csv(f'data/real_data/levels/{level}/races/{race}/i_probability')
-# sum_prob = 0.0
-# for index, row in df.iterrows():
-#     probability = row['probability']
-#     sum_prob += probability
-# print(sum_prob)
+alleles_count = len(allele_to_index)
+population_amount = len(id_to_index)
 
-# total_probs = [
-# 1.6359196801531626e-16,
-# 4.63303574581979e-17,
-# 6.818216970506675e-18,
-# 3.733232977279645e-18,
-# 3.0346568901841154e-18,
-# 2.593806809530494e-18,
-# 7.586644504163209e-19,
-# 7.586644504163209e-19,
-# 1.4740259796471218e-19
-# ]
-# total_sum = sum(total_probs)
-#
-# partial_prob214 = [
-# 1.6359196801531626e-16,
-# 3.733232977279645e-18
-# ]
-# partial_sum214 = sum(partial_prob214)
-#
-# partial_prob201 = [
-# 4.63303574581979e-17,
-# 6.818216970506675e-18,
-# 3.0346568901841154e-18,
-# 7.586644504163209e-19,
-# 1.4740259796471218e-19
-# ]
-# partial_sum201 = sum(partial_prob201)
-#
-# partial_prob205 = [
-# 2.593806809530494e-18,
-# 7.586644504163209e-19
-# ]
-# partial_sum205 = sum(partial_prob205)
-#
-# print(f'total sum: {total_sum}')
-# print(f' total sum for 214: {partial_sum214}')
-# print(f' total sum for 201: {partial_sum201}')
-# print(f' total sum for 205: {partial_sum205}')
-#
-# print(f' fraction for 214: {partial_sum214 / total_sum}')
-# print(f' fraction for 201: {partial_sum201 / total_sum}')
-# print(f' fraction for 205: {partial_sum205 / total_sum}')
-# print(f'{partial_sum214 / total_sum + partial_sum201 / total_sum + partial_sum205 / total_sum}')
+# {p(i)}
+alleles_probabilities = np.zeros(alleles_count)
 
-# plt.plot([0.0, 100.0], [0.0, 100.0])
-#
-# # scatter plot
-# plt.scatter([3,4,5], [6,8,10], marker='.')
-# plt.xlabel('Variance from formula')
-# plt.ylabel('Variance over experiments')
-# plt.show()
+# {p(i, j)}
+observed_probabilities = np.zeros(shape=(alleles_count, alleles_count))
 
-# z = np.array([[1,5,7], [3,8,9], [10,11,12]])
-# couples = 3 * 4 // 2
-# cdf = np.zeros(couples)
-# index = 0
-# for i in range(z.shape[0]):
-#     for j in range(i, z.shape[1]):
-#         cdf[index] = z[i, j]
-#         if index > 0:
-#             cdf[index] += cdf[index - 1]
-#         index += 1
-# print(cdf)
-# print(len(cdf))
+# correction matrix
+correction = np.zeros(shape=(alleles_count, alleles_count))
 
-# alleles_count = 2
-# population_amount = 3
-# alpha_val = 1.0
-# uncertainty_val = 0.0
-# alleles_probabilities = np.array([0.5, 0.5])
-#
-# probabilities = np.zeros(shape=(alleles_count, alleles_count))
-# for t in range(alleles_count):
-#     for m in range(t, alleles_count):
-#         if t == m:
-#             probabilities[t, m] = (1 - alpha_val) * alleles_probabilities[t] + alpha_val * (alleles_probabilities[m] ** 2)
-#         else:
-#             # we don't multiply by 2 here yet
-#             probabilities[t, m] = alpha_val * alleles_probabilities[t] * alleles_probabilities[m]
-#             probabilities[m, t] = alpha_val * alleles_probabilities[t] * alleles_probabilities[m]
-# # matrix where every row is the alleles for a person
-# alleles_individuals = np.zeros(
-#     (population_amount, 2), dtype=np.int32)
-#
-# print(f'probabilities matrix:')
-# print(probabilities)
-#
-# # 1) assignment of alleles with certainty
-# for k in range(population_amount):
-#     probabilities_list = probabilities.flatten()
-#     print(f'probabilities flattened: {probabilities_list}')
-#     index = random.choices(population=range(len(probabilities_list)), weights=probabilities_list, k=1)[0]
-#     print(f'index chosen: {index}')
-#     col = index % alleles_count
-#     row = (index - col) // alleles_count
-#     print(f'alleles chosen: row: {row}, col: {col}')
-#     row, col = min(row, col), max(row, col)
-#     # assignment of the alleles to the person
-#     alleles_individuals[k, :] = [row, col]
-#
-# print('assigned alleles:')
-# print(alleles_individuals)
-#
-# # now we multiply the upper triangle by 2
-# for t in range(alleles_count):
-#     for m in range(t + 1, alleles_count):
-#         probabilities[t, m] *= 2
-#
-# print(f'updated probabilities:')
-# print(probabilities)
-#
-# # matrix p_k(i,j) = A[i,j,k]
-# all_probabilities = np.zeros(shape=(alleles_count, alleles_count, population_amount))
-#
-# # adding uncertainty to our model
-# for k in range(population_amount):
-#     # person k has alleles j,l
-#     j, l = alleles_individuals[k]
-#     j, l = min(j, l), max(j, l)
-#
-#     # choice whether this person will have uncertain alleles
-#     choice = random.choices(population=[0, 1], weights=[uncertainty_val, 1 - uncertainty_val], k=1)[0]
-#
-#     # this person has certain alleles
-#     if choice == 1:
-#         all_probabilities[j, l, k] = 1.0
-#     # this person has uncertain alleles
-#     if choice == 0:
-#         for t in range(alleles_count):
-#             for m in range(t, alleles_count):
-#                 all_probabilities[t, m, k] = probabilities[t, m]
-#
-# for i in range(population_amount):
-#     print(f'probabilities of person {i}:')
-#     print(all_probabilities[:,:,i])
-#
-#
-# for t in range(alleles_count):
-#     for m in range(t, alleles_count):
-#         probability = 0.0
-#         for k in range(population_amount):
-#             probability += all_probabilities[t, m, k]
-#         probability /= population_amount
-#
-#         probabilities[t, m] = probability
-#
-# observations = probabilities * population_amount
-# print('observations:')
-# print(observations)
+# calculate {p_k(i,j)}
+with open(probabilities_path, encoding="utf8") as infile:
+    for index, line in enumerate(infile):
+        if index == 0:
+            continue
+
+        if index % 10000 == 0:
+            print(f'row: {index}, level: {level}, race: {race}, After preprocessing')
+        lst = line.strip('\n').split(',')
+
+        id = lst[0]
+        allele_1 = int(lst[1])
+        allele_2 = int(lst[2])
+        probability = float(lst[3])
+
+        id_index = id_to_index[id]
+
+        allele_1_index = allele_to_index[allele_1]
+        allele_2_index = allele_to_index[allele_2]
+
+        alleles_probabilities[allele_1_index] += 0.5 * probability
+        alleles_probabilities[allele_2_index] += 0.5 * probability
+
+        observed_probabilities[allele_1_index, allele_2_index] += probability
+
+        correction[allele_1_index, allele_2_index] += (probability ** 2)
+
+alleles_probabilities /= population_amount
+
+for i in range(alleles_count):
+    for j in range(alleles_count):
+        observed_probabilities[i, j] /= population_amount
+        if observed_probabilities[i, j] == 0:
+            correction[i, j] = 1.0
+        else:
+            correction[i, j] /= (population_amount * observed_probabilities[i, j])
+
+min_i = 0
+min_j = 0
+min_corr = correction[0, 0]
+
+for i in range(alleles_count):
+    for j in range(i, alleles_count):
+        expected = population_amount * alleles_probabilities[i] * alleles_probabilities[j]
+        if i != j:
+            expected *= 2
+        if expected >= 2.0 and correction[i, j] < min_corr:
+            min_corr = correction[i, j]
+            min_i = i
+            min_j = j
+
+print(min_i)
+print(min_j)
+
+expected = population_amount * alleles_probabilities[min_i] * alleles_probabilities[min_j]
+observed = population_amount * observed_probabilities[min_i, min_j]
+
+print(f'corr: {min_corr}, expected: {expected}, observed: {observed}')

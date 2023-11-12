@@ -1,5 +1,6 @@
 import random
 import numpy as np
+import seaborn as sns
 import math
 import pandas as pd
 import scipy.stats as stats
@@ -63,9 +64,7 @@ def count_row_occurrence_in_2d_array(j, k, data):
 def calculate_total_variance_alleles_i_j(alleles_amount_,
                                          population_amount,
                                          alleles_probabilities,
-                                         uncertainty_,
                                          observed_,
-                                         sum_observed_,
                                          i_, j_):
     # mult = 1
     # if i_ != j_:
@@ -122,7 +121,7 @@ def calculate_total_variance_alleles_i_j(alleles_amount_,
 
     # i_j_observed_probability = observed_[i_, j_] / sum_observed_
 
-    return expected * (1 + uncertainty_)
+    return expected
 
 
 # need to calculate only on the upper triangle because the matrices are symmetric
@@ -155,6 +154,13 @@ def calculate_chi_squared_value(counts_expected_, counts_observed_, counts_total
 #     return uncertainty_matrix
 
 
+def calc_variance(input_list, input_mean):
+    var = 0.0
+    for element in input_list:
+        var += (element - input_mean) ** 2
+    return var
+
+
 def prepare_probabilities(alleles_count):
     # probabilities {p(i)}
     alleles_probabilities = calculate_alleles_probabilities(alleles_count)
@@ -163,8 +169,7 @@ def prepare_probabilities(alleles_count):
 
 
 def run_experiment(alleles_count, population_amount, alpha_val, uncertainty_val,
-                   alleles_probabilities, should_use_new_test_):
-
+                   alleles_probabilities, plot_index):
     probabilities = np.zeros(shape=(alleles_count, alleles_count))
     for t in range(alleles_count):
         for m in range(t, alleles_count):
@@ -184,11 +189,11 @@ def run_experiment(alleles_count, population_amount, alpha_val, uncertainty_val,
     # print(f' marginal: {marginal_probabilities}')
 
     # 1) assignment of alleles with certainty
+    probabilities_list = probabilities.flatten()
+    indices = random.choices(population=range(len(probabilities_list)), weights=probabilities_list, k=population_amount)
     for k in range(population_amount):
-        probabilities_list = probabilities.flatten()
-
         # notice the alleles i != j have probability 2 * p(i,j)
-        index = random.choices(population=range(len(probabilities_list)), weights=probabilities_list, k=1)[0]
+        index = indices[k]
         # the right allele of this index element
         col = index % alleles_count
         # the left allele
@@ -199,16 +204,17 @@ def run_experiment(alleles_count, population_amount, alpha_val, uncertainty_val,
         alleles_individuals[k, :] = [row, col]
 
     # now we multiply the upper triangle by 2
-    for t in range(alleles_count):
-        for m in range(t + 1, alleles_count):
-            probabilities[t, m] *= 2
+    # for t in range(alleles_count):
+    #     for m in range(t + 1, alleles_count):
+    #         probabilities[t, m] *= 2
+    #         probabilities[m, t] = 0
 
-        # print(f'alleles_individuals: {alleles_individuals}')
+    # print(f'alleles_individuals: {alleles_individuals}')
 
     # matrix p_k(i,j) = A[i,j,k]
     all_probabilities = np.zeros(shape=(alleles_count, alleles_count, population_amount))
 
-    # print(f'alleles_individuals after uncertainty: {alleles_individuals}')
+    choices = random.choices(population=[0, 1], weights=[uncertainty_val, 1 - uncertainty_val], k=population_amount)
 
     # adding uncertainty to our model
     for k in range(population_amount):
@@ -217,16 +223,14 @@ def run_experiment(alleles_count, population_amount, alpha_val, uncertainty_val,
         j, l = min(j, l), max(j, l)
 
         # choice whether this person will have uncertain alleles
-        choice = random.choices(population=[0, 1], weights=[uncertainty_val, 1 - uncertainty_val], k=1)[0]
+        choice = choices[k]
 
         # this person has certain alleles
         if choice == 1:
             all_probabilities[j, l, k] = 1.0
         # this person has uncertain alleles
         if choice == 0:
-            for t in range(alleles_count):
-                for m in range(t, alleles_count):
-                    all_probabilities[t, m, k] = probabilities[t, m]
+            all_probabilities[:, :, k] = probabilities
 
     # now we have the probabilities {p_k(i,j)}
     # lets get the final p(i,j) = 1 / N * sum_k p_k(i,j)
@@ -236,18 +240,22 @@ def run_experiment(alleles_count, population_amount, alpha_val, uncertainty_val,
         for m in range(t, alleles_count):
             probability = 0.0
             for k in range(population_amount):
-                probability += all_probabilities[t, m, k]
+                if t == m:
+                    probability += all_probabilities[t, m, k]
+                else:
+                    probability += (all_probabilities[t, m, k] + all_probabilities[m, t, k])
             probability /= population_amount
 
             observed_probabilities[t, m] = probability
 
     observations = observed_probabilities * population_amount
 
-    sum_observed = 0.0
-    for k in range(alleles_count):
-        for j in range(k, alleles_count):
-            sum_observed += observations[k, j]
+    # sum_observed = 0.0
+    # for k in range(alleles_count):
+    #     for j in range(k, alleles_count):
+    #         sum_observed += observations[k, j]
 
+    x_values = []
     counts_expected = np.zeros((alleles_count, alleles_count))
     for j in range(alleles_count):
         for k in range(j, alleles_count):
@@ -255,90 +263,142 @@ def run_experiment(alleles_count, population_amount, alpha_val, uncertainty_val,
             mult = 1
             if k != j:
                 mult = 2
-            expected_value = mult * population_amount * alleles_probabilities[k] * alleles_probabilities[j]
-            counts_expected[k, j] = expected_value
+            expected_value = mult * population_amount * alleles_probabilities[j] * alleles_probabilities[k]
             counts_expected[j, k] = expected_value
+            x_values.append(counts_expected[j, k])
+    # counts_total_variance = np.zeros((alleles_count, alleles_count))
+    # for j in range(alleles_count):
+    #     for k in range(j, alleles_count):
+    #         total_variance = calculate_total_variance_alleles_i_j(alleles_count,
+    #                                                               population_amount,
+    #                                                               alleles_probabilities,
+    #                                                               observations,
+    #                                                               j, k)
+    #
+    #         counts_total_variance[j, k] = total_variance
 
-    counts_total_variance = np.zeros((alleles_count, alleles_count))
-    for k in range(alleles_count):
-        for j in range(k, alleles_count):
-            total_variance = calculate_total_variance_alleles_i_j(alleles_count,
-                                                                  population_amount,
-                                                                  alleles_probabilities,
-                                                                  uncertainty_val,
-                                                                  observations,
-                                                                  sum_observed,
-                                                                  k, j)
+    observed_no_sampling_vector = []
+    # variance_vector = []
 
-            counts_total_variance[k, j] = total_variance
-            counts_total_variance[j, k] = total_variance
+    for j in range(alleles_count):
+        for k in range(j, alleles_count):
+            observed_no_sampling_vector.append(observations[j, k])
+            # variance_vector.append(counts_total_variance[j, k])
 
-    chi_squared_stat = calculate_chi_squared_value(counts_expected_=counts_expected,
-                                                   counts_observed_=observations,
-                                                   counts_total_variance_=counts_total_variance,
-                                                   should_use_new_test_=should_use_new_test_)
-    dof = (alleles_count * (alleles_count + 1)) / 2 - 1
+    # observed_vector = [np.log(np.log(observed_value)) for observed_value in observed_vector]
+    # observed_vector = [np.log(np.log(observed_value)) for observed_value in observed_vector]
+    #
+    # observed_diagonal_vector = [np.log(np.log(observed_value)) for observed_value in observed_diagonal_vector]
+    # variance_diagonal_vector = [np.log(np.log(observed_value)) for observed_value in variance_diagonal_vector]
+    plt.subplot(2, 3, plot_index)
+    plt.scatter(x_values, observed_no_sampling_vector, color='black', label='OBS NO SAMPLING', s=1.5)
+    plt.xlabel('N*p(i)*p(j)')
 
-    # print(f' alpha for choice: {alpha_val}')
-    # print(f' chi square value: {chi_squared_stat}')
+    # for each k make {p_k(i,j)} symmetric and choose for every k alleles i,j
+    for k in range(population_amount):
+        # for t in range(alleles_count):
+        #     for m in range(t, alleles_count):
+        #         all_probabilities[t, m, k] = (all_probabilities[t, m, k] + all_probabilities[m, t, k]) / 2
+        probabilities_list = all_probabilities[:, :, k].flatten()
+        index = random.choices(population=range(len(probabilities_list)), weights=probabilities_list, k=1)[0]
 
-    crit = stats.chi2.ppf(q=0.95, df=dof)
-    # print(f'Critical value: {crit}')
+        # the right allele of this index element
+        col = index % alleles_count
+        # the left allele
+        row = (index - col) // alleles_count
+        # making sure i <= j
+        row, col = min(row, col), max(row, col)
+        # assignment of the alleles to the person
+        alleles_individuals[k, :] = [row, col]
 
-    p_value = 1 - stats.chi2.cdf(x=chi_squared_stat,
-                                 df=dof)
-    if p_value < 0.05:
-        return 1
-    return 0
+    observed_sampling_vector = []
+    variance_sampling_vector = []
+    variance_no_sampling_vector = []
+
+    # calculate observations
+    observations = np.zeros(shape=(alleles_count, alleles_count))
+    for k in range(population_amount):
+        t, m = alleles_individuals[k]
+        observations[t, m] += 1
+
+    for t in range(alleles_count):
+        for m in range(t, alleles_count):
+            observed_sampling_vector.append(observations[t, m])
+    # calculate variance
+
+    for t in range(alleles_count):
+        for m in range(t, alleles_count):
+            probabilities_list = all_probabilities[t, m, :].flatten()
+            mean_value = np.mean(probabilities_list)
+            variance = calc_variance(input_list=probabilities_list,
+                                     input_mean=mean_value)
+            variance_no_sampling_vector.append(variance)
+
+    for t in range(alleles_count):
+        for m in range(t, alleles_count):
+            indicators = []
+            for k in range(population_amount):
+                y, u = alleles_individuals[k]
+                indicator = int((t == y) and (m == u))
+                indicators.append(indicator)
+            mean_value = np.mean(indicators)
+            variance = calc_variance(input_list=indicators,
+                                     input_mean=mean_value)
+            variance_sampling_vector.append(variance)
+
+    # observed_vector = [np.log(np.log(observed_value)) for observed_value in observed_vector]
+    # observed_vector = [np.log(np.log(observed_value)) for observed_value in observed_vector]
+    #
+    # observed_diagonal_vector = [np.log(np.log(observed_value)) for observed_value in observed_diagonal_vector]
+    # variance_diagonal_vector = [np.log(np.log(observed_value)) for observed_value in variance_diagonal_vector]
+    # min_x2 = min(observed_vector + observed_diagonal_vector)
+    # max_x2 = max(observed_vector + observed_diagonal_vector)
+    #
+    # min_y2 = min(variance_vector + variance_diagonal_vector)
+    # max_y2 = max(variance_vector + variance_diagonal_vector)
+    #
+    # min_x = min(min_x, min_x2)
+    # max_x = max(max_x, max_x2)
+    #
+    # min_y = min(min_y, min_y2)
+    # max_y = max(max_y, max_y2)
+    #
+    # min_val = min(min_x, min_y)
+    # max_val = max(max_x, max_y)
+    plt.scatter(x_values, observed_sampling_vector, color='orange', label='OBS SAMPLING', s=1.5)
+    plt.scatter(x_values, variance_no_sampling_vector, color='blue', label='VAR NO SAMPLING', s=1.5)
+    plt.scatter(x_values, variance_sampling_vector, color='lime', label='VAR SAMPLING', s=1.5)
+    # plt.xlim([min_val, max_val])
+    # plt.ylim([min_val, max_val])
+    plt.legend()
+    plt.title(f'Alpha: {alpha_val}. Uncertainty: {uncertainty_val}')
 
 
-fix, ax = plt.subplots()
-ax.grid()
-ax.set_axisbelow(True)
+if __name__ == '__main__':
+    alleles_amount = 50  # 20
+    population_size = 10000  # 10000
+    alpha_vals = [1.0, 0.85]
+    uncertainty_vals = [0.0, 0.2, 0.4]
 
-num_of_experiments = 400  # 500 amount of experiments for each alpha ranging from zero to one
-alleles_amount = 10  # 2
-population_size = 400  # 35
-interval_for_alpha = 0.04  # 0.02
-# uncertainty = 0.2
-uncertainty_vals = [0.0, 0.1, 0.2, 0.4]
-# blue color: 'royalblue'
-colors = ['royalblue', 'slategrey', 'limegreen', 'deeppink']
-alpha_values = np.arange(start=0, stop=1 + interval_for_alpha, step=interval_for_alpha)  # start, stop, step
-# alpha_values = np.array([1.0])
-confidence_amounts_per_alpha = np.zeros((len(uncertainty_vals), alpha_values.shape[0]))
-should_use_new_test = 0
-# markers = ['', '>']
-markers = ['.', '>']
-labels = ['Old Chi-Squared', 'Corrected Chi-Squared']
-# print(alpha_values.shape)
-# print(confidence_amounts_per_alpha.shape)
-alleles_probabilities_ = prepare_probabilities(alleles_count=alleles_amount)
+    sns.set_style('white')
+    plt.rcParams["font.family"] = "Arial"
 
-for should_use_new_test in range(2):
-    for uncertainty_index, uncertainty in enumerate(uncertainty_vals):
-        for i, alpha in enumerate(alpha_values):
-            counter = 0
+    fig, axes = plt.subplots(len(alpha_vals), len(uncertainty_vals), constrained_layout=True)
 
-            for experiment in range(num_of_experiments):
-                counter += run_experiment(alleles_amount, population_size, alpha, uncertainty,
-                                          alleles_probabilities_, should_use_new_test)
-            print(f'uncertainty = {uncertainty}, alpha = {alpha}, test type = {should_use_new_test}')
-            confidence_amount = counter / num_of_experiments
-            confidence_amounts_per_alpha[uncertainty_index, i] = confidence_amount
+    print('Calculating probabilities')
+    # get {p(i)}, {p(i|j)}
+    alleles_probabilities_ = prepare_probabilities(alleles_count=alleles_amount)
 
-        print(confidence_amounts_per_alpha[uncertainty_index, :])
-        plt.plot(alpha_values, confidence_amounts_per_alpha[uncertainty_index, :],
-                 label=f'{labels[should_use_new_test]}, uncertainty = {uncertainty}',
-                 marker=markers[should_use_new_test],
-                 color=colors[uncertainty_index])
+    plot_num = 0
 
-# print(confidence_amounts_per_alpha[-1])
-
-# plt.plot(alpha_values, confidence_amounts_per_alpha, 'r-', label="")
-plt.xlabel('Alpha values')
-plt.ylabel('Percentage of confidence amounts')
-plt.title('Old vs Corrected Chi-Squared')
-plt.legend()
-plt.savefig('chi_squared_simulation', pad_inches=0.2, bbox_inches="tight")
-plt.show()
+    for alpha in alpha_vals:
+        for uncertainty in uncertainty_vals:
+            print(f'alpha: {alpha}, uncertainty: {uncertainty}')
+            plot_num += 1
+            run_experiment(alleles_count=alleles_amount,
+                           population_amount=population_size,
+                           alpha_val=alpha, uncertainty_val=uncertainty,
+                           alleles_probabilities=alleles_probabilities_,
+                           plot_index=plot_num)
+    plt.savefig('chi_squared.png', pad_inches=0.2, bbox_inches="tight")
+    plt.show()

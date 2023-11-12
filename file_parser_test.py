@@ -104,8 +104,6 @@ def create_id_allele1_allele2_probability_files_for_each_level(level):
             my_dict[id_row] = sum_row
         race_to_id_to_sum[race] = my_dict
 
-    race_to_id_allele1_allele2_to_probability = {}
-
     # race -> id_allele1_allele2 -> dict {id: allele_1: allele_2: probability:}
     race_to_id_allele1_allele2_to_id_allele1_allele2_probability_dict = {}
 
@@ -174,6 +172,9 @@ def create_id_allele1_allele2_probability_files_for_each_level(level):
 
 
 #### FINE UNTIL HERE
+levels_set = utils.LEVELS_SET
+for level in levels_set:
+    create_id_allele1_allele2_probability_files_for_each_level(level)
 
 
 # for each level and race we create a csv file 'uncertainty' with id,uncertainty
@@ -301,4 +302,4 @@ def create_alleles_probability_files():
             df_probabilities.to_csv(f'{real_data_path}/levels/{level}/races/{race}/i_probability', index=False)
 
 
-create_alleles_probability_files()
+# create_alleles_probability_files()

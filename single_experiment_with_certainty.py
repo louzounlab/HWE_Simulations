@@ -8,6 +8,7 @@ import array as arr
 import utils_with_certainty
 import matplotlib.pyplot as plt
 import time
+import warnings
 
 
 # populations_probs of size alleles_count x alleles_count x population_amount
@@ -79,6 +80,18 @@ def perform_experiment(alleles_count, population_amount, alpha_val, experiment_n
     #     l = random.choices(population=range(alleles_count), weights=alleles_probabilities,
     #                        k=1)[0]
     second_couple = [k, l]
+
+    # every row represents a couple i,j and a value (either 1 or -1)
+    # in the first iteration here we have 4 couples, but in the next iterations we will have 2 couples.
+    couples = np.zeros(shape=(2, 3), dtype=int)
+    couples[0, :] = [first_couple[0], first_couple[1], -1]
+    couples[1, :] = [second_couple[0], second_couple[1], +1]
+
+    # calculate new delta and modify observed
+    utils_with_certainty.update_current_delta_probability(list_probabilities, observed, alleles_probabilities, couples,
+                                                          population_amount_calculated,
+                                                          probabilities)
+
     # pick two alleles using the cdf (first we pick a number between 0 and 1 and then get element with the closest
     # probability)
     # t
@@ -98,11 +111,8 @@ def perform_experiment(alleles_count, population_amount, alpha_val, experiment_n
 
     # every row represents a couple i,j and a value (either 1 or -1)
     # in the first iteration here we have 4 couples, but in the next iterations we will have 2 couples.
-    couples = np.zeros(shape=(4, 3), dtype=int)
-    couples[0, :] = [first_couple[0], first_couple[1], -1]
-    couples[1, :] = [second_couple[0], second_couple[1], +1]
-    couples[2, :] = [first_couple[1], allele_1, +1]
-    couples[3, :] = [second_couple[1], allele_2, -1]
+    couples[0, :] = [first_couple[1], allele_1, +1]
+    couples[1, :] = [second_couple[1], allele_2, -1]
 
     # calculate new delta and modify observed
     utils_with_certainty.update_current_delta_probability(list_probabilities, observed, alleles_probabilities, couples,
@@ -110,16 +120,16 @@ def perform_experiment(alleles_count, population_amount, alpha_val, experiment_n
                                                           probabilities)
     # now keep iterating to fill the list of deltas
     # iterations: 100000
-    iterations = 5000000 * 10
+    iterations = 100000
     # iterations = 5
     for k in range(iterations):
         # sums.append(sum_loops[0])
-        if k % 1000 == 0:
+        if (k % 100) == 0:
             print(f' loop {k} / {iterations}. experiment num: {experiment_num}. alleles: {alleles_count}. '
                   f'population: {population_amount}. alpha: {alpha_val}')
-            # print(observed)
-            # print('cdf dict:')
-            # print(cdf_dict)
+        # print(observed)
+        # print('cdf dict:')
+        # print(cdf_dict)
         # print(alleles_state)
 
         # updating the couples
@@ -135,17 +145,21 @@ def perform_experiment(alleles_count, population_amount, alpha_val, experiment_n
         #     x = random.choices(population=range(alleles_count), weights=alleles_probabilities,
         #                        k=1)[0]
         # y
+        should_update_dict = False
+        if (k % 100) == 0:
+            should_update_dict = True
         y = utils_with_certainty.get_allele_from_cdf_dict(alleles_count, cdf_dict, observed,
-                                                          left_alleles=second_couple)
+                                                          left_alleles=second_couple,
+                                                          should_update_dict=should_update_dict)
         # while y in {x}:
         #     y = utils_with_certainty.get_allele_from_cdf_dict(alleles_count, cdf_dict, observed,
         #                                                       left_alleles=second_couple)
 
         couple_from_cdf = [x, y]
 
-        couples = np.zeros(shape=(2, 3), dtype=int)
         couples[0, :] = [first_couple[1], x, +1]
         couples[1, :] = [second_couple[1], y, -1]
+        # print(couples)
 
         # print(f'plus couple to update: {first_couple[1]}, {x}')
         # print(f'minus couple to update: {second_couple[1]}, {y}')
@@ -164,7 +178,8 @@ def perform_experiment(alleles_count, population_amount, alpha_val, experiment_n
                                                            population_amount=population_amount,
                                                            alleles_probabilities=alleles_probabilities,
                                                            observed=observed,
-                                                           cdf_dict=cdf_dict)
+                                                           cdf_dict=cdf_dict,
+                                                           iterations=iterations)
 
     values = []
 
@@ -181,6 +196,7 @@ def perform_experiment(alleles_count, population_amount, alpha_val, experiment_n
 
     # print(observed)
     # plt.subplot(7, 7, plot_index)
+    print(observed)
     print(f'start time: {start_from}, original is 10000, amount of iterations: {iterations}')
     plt.plot(list(range(start_from, len(values) + start_from)), values)
     plt.show()
@@ -217,8 +233,10 @@ plt.rcParams["font.family"] = "Arial"
 #                        population_amount_calculated_, alleles_probabilities, probabilities_, observed_, i)
 # plt.show()
 
-alleles_count_ = 4
-population_amount_ = 1000000
+warnings.filterwarnings("error")
+
+alleles_count_ = 10000
+population_amount_ = 1000000000
 alpha_val_ = 0.0
 experiment_num_ = 0
 
@@ -229,3 +247,16 @@ population_amount_calculated_, alleles_probabilities, probabilities_, observed_,
 
 perform_experiment(alleles_count_, population_amount_, alpha_val_, experiment_num_,
                    population_amount_calculated_, alleles_probabilities, probabilities_, observed_)
+
+# alleles_count_ = 2
+# population_amount_ = 983
+# alpha_val_ = 0.0
+# experiment_num_ = 0
+# population_amount_calculated_ = 983
+# alleles_probabilities = np.array([0.5, 0.5])
+# probabilities_ = np.array([[0.25, 0.5],
+#                            [0, 0.25]])
+# observed_ = np.array([[576, 407.],
+#                       [0, 0.]])
+# perform_experiment(alleles_count_, population_amount_, alpha_val_, experiment_num_,
+#                    population_amount_calculated_, alleles_probabilities, probabilities_, observed_)

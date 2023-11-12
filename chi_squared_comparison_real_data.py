@@ -39,26 +39,26 @@ def calculate_chi_squared_value(alleles_amount, population_amount, alleles_proba
             observed_val = population_amount * observed_probability
             # print(f'expected: {expected_val}')
             # print(f'observed: {observed_val}')
-            if (expected_val < 2) and (observed_val < 2):
-                small_expected_observed_counter += 1
-                continue
-            if (expected_val < 2) and (observed_val > 2):
-                small_expected_high_observed_counter += 1
-            variance_val = counts_total_variance_[i, j]
             if should_use_new_test_:
+                if (expected_val < 2) and (observed_val < 2):
+                    small_expected_observed_counter += 1
+                    continue
+                if (expected_val < 2) and (observed_val > 2):
+                    small_expected_high_observed_counter += 1
+                variance_val = counts_total_variance_[i, j]
                 denominator = variance_val
             else:
                 denominator = expected_val
             value += (((expected_val - observed_val) ** 2) / denominator)
             # print(f'expected value: {expected_val}, observed_val : {observed_val}, denominator: {denominator}')
-    print(f'amount of small expected and high observed is: {small_expected_high_observed_counter}')
+    # print(f'amount of small expected and high observed is: {small_expected_high_observed_counter}')
     return value, small_expected_observed_counter
 
 
 # alleles_probabilities, observed_ are dictionaries
 def run_experiment(alleles_count, population_amount, uncertainty_val, alleles_probabilities,
                    observed_probabilities,
-                   should_use_new_test_):
+                   should_use_new_test_=0):
     # i_j -> {i,j,V(i,j)}
     total_variance_matrix = np.zeros(shape=(alleles_count, alleles_count))
     for i in range(alleles_count):
@@ -77,10 +77,12 @@ def run_experiment(alleles_count, population_amount, uncertainty_val, alleles_pr
                                                                                           observed_probabilities_=observed_probabilities,
                                                                                           counts_total_variance_=total_variance_matrix,
                                                                                           should_use_new_test_=should_use_new_test_)
-    print(f'amount of small expected and observed: {small_expected_small_observed_counter}')
-    print(f' statistic: {chi_squared_stat}')
-    dof = (alleles_count * (alleles_count + 1)) / 2 - 1 - small_expected_small_observed_counter
-    print(f'dof: {dof}')
+    # print(f'amount of small expected and observed: {small_expected_small_observed_counter}')
+    # print(f' statistic: {chi_squared_stat}')
+    dof = (alleles_count * (alleles_count + 1)) / 2 - 1
+    if should_use_new_test_:
+        dof -= small_expected_small_observed_counter
+    # print(f'dof: {dof}')
     # print(f' alpha for choice: {alpha_val}')
     # print(f' chi square value: {chi_squared_stat}')
 
@@ -225,4 +227,5 @@ def perform_tests_save_data(level, race):
     return old_p_value, new_p_value, old_chi_squared, new_chi_squared, uncertainty, dof
 
 
-get_data_for_chi_squared()
+if __name__ == '__main__':
+    get_data_for_chi_squared()
