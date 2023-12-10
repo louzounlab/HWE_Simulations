@@ -5,9 +5,8 @@ import scipy.stats as stats
 import random
 import utils
 import warnings
-import chi_squared_comparison_real_data
+from models import chi_squared
 from models.gibbs_sampling import full_algorithm
-import single_experiment_with_certainty_test
 
 real_data_path = '../../../data/Snipping_Data/snps_from_martin/donors.ped'
 
@@ -160,24 +159,21 @@ if __name__ == '__main__':
             observed_probabilities_, \
             observations_, \
             probabilities_ = get_data(snipping_index_)
-        observed_cdf_ = single_experiment_with_certainty_test.calc_observed_cdf(alleles_count=alleles_count_,
-                                                                                observed=observations_)
+        # observed_cdf_ = single_experiment_with_certainty_test.calc_observed_cdf(alleles_count=alleles_count_,
+        #                                                                         observed=observations_)
 
         print('getting chi-squared p_value')
         # get the chi-squared p_value
-        chi_squared_p_value, _, _ = chi_squared_comparison_real_data.run_experiment(alleles_count=alleles_count_,
-                                                                                    population_amount=population_amount_,
-                                                                                    uncertainty_val=0.0,
-                                                                                    alleles_probabilities=alleles_probabilities_,
-                                                                                    observed_probabilities=observed_probabilities_)
+        chi_squared_p_value, _, _ = chi_squared.run_experiment(alleles_count=alleles_count_,
+                                                               population_amount=population_amount_,
+                                                               alleles_probabilities=alleles_probabilities_,
+                                                               observed_probabilities=observed_probabilities_,
+                                                               correction=None,
+                                                               should_use_new_test=0,
+                                                               cutoff_value_=0.0)
         print('getting gibbs sampling p_value')
         # get the gibbs sampling p_value
-        gibbs_sampling_p_value = full_algorithm(alleles_count=alleles_count_,
-                                                population_amount=population_amount_,
-                                                alleles_probabilities=alleles_probabilities_,
-                                                probabilities=probabilities_,
-                                                observations=observations_,
-                                                observed_cdf=observed_cdf_)
+        gibbs_sampling_p_value = full_algorithm(observations=observations_)
 
         chi_squared_results.append(chi_squared_p_value)
         gibbs_sampling_results.append(gibbs_sampling_p_value)

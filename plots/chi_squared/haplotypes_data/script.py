@@ -1,55 +1,100 @@
 import numpy as np
 import pandas as pd
 import scipy.stats as stats
-import utils
+import random
+import constants
 from models import chi_squared
 
-real_data_path = '../data/hla_data_5_populations'
+real_data_path = '../../../data/haplotypes_data'
+
+# THIS FILE USES THE EXTRACTED DATA, PERFORM THE STATISTICAL TESTS AND SAVE IN THE RESULTS DIRECTORY
 
 
-def get_data_for_chi_squared():
-    levels_set = utils.LEVELS_SET
-    races_set = utils.RACES_5_SET
+def get_data_for_chi_squared(file_name, is_using_haplotypes):
+    levels_list = constants.LEVELS_LIST
+    races_list = constants.FILE_NAME_TO_POPULATIONS[file_name]
 
-    columns = list(races_set)
-    index = list(levels_set)
+    columns = list(races_list)
+    if not is_using_haplotypes:
+        index = list(levels_list)
+    else:
+        index = ['USING_HAPLOTYPES']
 
     df_old_chi_squared_results = pd.DataFrame(columns=columns, index=index)
     df_new_chi_squared_results = pd.DataFrame(columns=columns, index=index)
+
     df_old_chi_squared = pd.DataFrame(columns=columns, index=index)
     df_new_chi_squared = pd.DataFrame(columns=columns, index=index)
     # df_ambiguities = pd.DataFrame(columns=columns, index=index)
     df_dof = pd.DataFrame(columns=columns, index=index)
 
-    for i, level in enumerate(index):
+    if not is_using_haplotypes:
+        for i, level in enumerate(index):
+            for j, race in enumerate(columns):
+                print(f'level: {level}, race: {race}')
+                old_p_value_, new_p_value_,\
+                    old_chi_squared_, new_chi_squared_, \
+                    dof_ = perform_tests_save_data(file_name=file_name,
+                                                   is_using_haplotypes=is_using_haplotypes,
+                                                   level_haplotype=level,
+                                                   race=race)
+
+                df_old_chi_squared_results.iloc[i, j] = old_p_value_
+                df_new_chi_squared_results.iloc[i, j] = new_p_value_
+
+                df_old_chi_squared.iloc[i, j] = old_chi_squared_
+                df_new_chi_squared.iloc[i, j] = new_chi_squared_
+
+                # df_ambiguities.iloc[i, j] = ambiguity
+                df_dof.iloc[i, j] = dof_
+    else:
         for j, race in enumerate(columns):
-            print(f'level: {level}, race: {race}')
-            old_p_value_, new_p_value_, old_chi_squared_, new_chi_squared_, dof_ = perform_tests_save_data(
-                level,
-                race)
-            df_old_chi_squared_results.iloc[i, j] = old_p_value_
-            df_new_chi_squared_results.iloc[i, j] = new_p_value_
-            df_old_chi_squared.iloc[i, j] = old_chi_squared_
-            df_new_chi_squared.iloc[i, j] = new_chi_squared_
+            print(f'using haplotypes, race: {race}')
+            old_p_value_, new_p_value_, \
+                old_chi_squared_, new_chi_squared_, \
+                dof_ = perform_tests_save_data(file_name=file_name,
+                                               is_using_haplotypes=is_using_haplotypes,
+                                               level_haplotype=None,
+                                               race=race)
+
+            df_old_chi_squared_results.iloc[0, j] = old_p_value_
+            df_new_chi_squared_results.iloc[0, j] = new_p_value_
+
+            df_old_chi_squared.iloc[0, j] = old_chi_squared_
+            df_new_chi_squared.iloc[0, j] = new_chi_squared_
+
             # df_ambiguities.iloc[i, j] = ambiguity
-            df_dof.iloc[i, j] = dof_
+            df_dof.iloc[0, j] = dof_
 
-    df_old_chi_squared_results.to_csv(f'{real_data_path}/results/old_chi_squared_p_values')
-    df_new_chi_squared_results.to_csv(f'{real_data_path}/results/new_chi_squared_p_values')
-    df_old_chi_squared.to_csv(f'{real_data_path}/results/old_chi_squared_statistic')
-    df_new_chi_squared.to_csv(f'{real_data_path}/results/new_chi_squared_statistic')
-    # df_ambiguities.to_csv(f'{real_data_path}/results/ambiguities')
-    df_dof.to_csv(f'{real_data_path}/results/dof')
+    if not is_using_haplotypes:
+        df_old_chi_squared_results.to_csv(f'{real_data_path}/{file_name}/results/levels/old_chi_squared_p_values.csv')
+        df_new_chi_squared_results.to_csv(f'{real_data_path}/{file_name}/results/levels/new_chi_squared_p_values.csv')
+
+        df_old_chi_squared.to_csv(f'{real_data_path}/{file_name}/results/levels/old_chi_squared_statistic.csv')
+        df_new_chi_squared.to_csv(f'{real_data_path}/{file_name}/results/levels/new_chi_squared_statistic.csv')
+        # df_ambiguities.to_csv(f'{real_data_path}/results/ambiguities')
+        df_dof.to_csv(f'{real_data_path}/{file_name}/results/levels/dof.csv')
+    else:
+        df_old_chi_squared_results.to_csv(f'{real_data_path}/{file_name}/results/haplotypes/old_chi_squared_p_values.csv')
+        df_new_chi_squared_results.to_csv(f'{real_data_path}/{file_name}/results/haplotypes/new_chi_squared_p_values.csv')
+
+        df_old_chi_squared.to_csv(f'{real_data_path}/{file_name}/results/haplotypes/old_chi_squared_statistic.csv')
+        df_new_chi_squared.to_csv(f'{real_data_path}/{file_name}/results/haplotypes/new_chi_squared_statistic.csv')
+        # df_ambiguities.to_csv(f'{real_data_path}/results/ambiguities')
+        df_dof.to_csv(f'{real_data_path}/{file_name}/results/haplotypes/dof.csv')
 
 
-def perform_tests_save_data(level, race):
+def perform_tests_save_data(file_name, is_using_haplotypes, level_haplotype, race):
     # df_id_allele1_allele2_prob = pd.read_csv(
     #     f'{real_data_path}/levels/{level}/races/{race}/id_allele1_allele2_probability',
     #     dtype={'id': str, 'allele_1': int, 'allele_2': int, 'probability': float})
     id_to_index = {}
     allele_to_index = {}
 
-    probabilities_path = f'{real_data_path}/levels/{level}/races/{race}/id_allele1_allele2_probability'
+    if not is_using_haplotypes:
+        probabilities_path = f'{real_data_path}/{file_name}/levels/{level_haplotype}/races/{race}/id_allele1_allele2_probability'
+    else:
+        probabilities_path = f'{real_data_path}/{file_name}/haplotypes/races/{race}/id_allele1_allele2_probability'
 
     # first read all the rows and get indices of ids and alleles and amounts
     with open(probabilities_path, encoding="utf8") as infile:
@@ -58,7 +103,10 @@ def perform_tests_save_data(level, race):
             if index == 0:
                 continue
             if index % 10000 == 0:
-                print(f'row: {index}, level: {level}, race: {race}, preprocessing')
+                if not is_using_haplotypes:
+                    print(f'row: {index}, file_name: {file_name}, level: {level_haplotype}, race: {race}, preprocessing')
+                else:
+                    print(f'row: {index}, level: {level_haplotype}, race: {race}, preprocessing')
             lst = line.strip('\n').split(',')
 
             id = lst[0]
@@ -94,6 +142,9 @@ def perform_tests_save_data(level, race):
     alleles_count = len(allele_to_index)
     population_amount = len(id_to_index)
 
+    if is_using_haplotypes:
+        print(f'race: {race}, not using haplotypes, alleles amount: {alleles_count}')
+
     # {p(i)}
     alleles_probabilities = np.zeros(alleles_count)
 
@@ -110,7 +161,10 @@ def perform_tests_save_data(level, race):
                 continue
 
             if index % 10000 == 0:
-                print(f'row: {index}, level: {level}, race: {race}, After preprocessing')
+                if not is_using_haplotypes:
+                    print(f'row: {index}, file_name: {file_name}, level: {level_haplotype}, race: {race}, After preprocessing')
+                else:
+                    print(f'row: {index}, level: {level_haplotype}, race: {race}, After preprocessing')
             lst = line.strip('\n').split(',')
 
             # id = lst[0]
@@ -123,8 +177,11 @@ def perform_tests_save_data(level, race):
             allele_1_index = allele_to_index[allele_1]
             allele_2_index = allele_to_index[allele_2]
 
+            # print(f'allele_1: {allele_1}, allele_2: {allele_2}')
+            # print(f'allele_1_index: {allele_1_index}, allele_2_index: {allele_2_index}')
             allele_1_index, allele_2_index = min(allele_1_index, allele_2_index), max(allele_1_index, allele_2_index)
-
+            # print(f'allele_1_index: {allele_1_index}, allele_2_index: {allele_2_index}')
+            # print('----------------------------------------------')
             alleles_probabilities[allele_1_index] += 0.5 * probability
             alleles_probabilities[allele_2_index] += 0.5 * probability
 
@@ -166,5 +223,12 @@ def perform_tests_save_data(level, race):
 
 
 if __name__ == '__main__':
-    get_data_for_chi_squared()
+    file_names = constants.FILE_NAMES
 
+    for file in file_names:
+        # run for alleles
+        get_data_for_chi_squared(file_name=file,
+                                 is_using_haplotypes=0)
+        # run for haplotypes
+        # get_data_for_chi_squared(file_name=file,
+        #                          is_using_haplotypes=1)

@@ -11,6 +11,8 @@ def change_index(index):
         if prefix.is_integer():
             prefix = int(prefix)
         vocab[i] = str(prefix) + 'M'
+        if str(prefix) == '1000':
+            vocab[i] = '1B'
     return vocab
 
 

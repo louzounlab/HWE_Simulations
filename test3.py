@@ -1,157 +1,170 @@
-import pandas as pd
+import random
 import numpy as np
+import scipy.stats as stats
+import os
 import csv
+import time
 
-# level = 'A'
-# race = 'AFA'
+
+# # assuming x is 2-dimensional
+# def softmax_1d(x):
+#     sum = 0.0
+#     for row in range(x.shape[0]):
+#         sum += np.exp(x[row])
+#     return np.exp(x) / sum
 #
-# path = f'data/real_data_test/levels/{level}/races/{race}'
 #
-# ambiguity_df = pd.read_csv(f'{path}/uncertainty',
-#                            dtype={'id': str, 'uncertainty': float})
-# i_j_probability_df = pd.read_csv(f'{path}/id_allele1_allele2_probability',
-#                                  dtype={'id': str, 'allele_1': int, 'allele_2': int, 'probability': float})
-# id_sum_df = pd.read_csv('data/real_data_test/races/AFA/id_sum',
-#                         dtype={'id': str, 'sum': float})
-# print(ambiguity_df.shape[0])
-# print(i_j_probability_df.shape[0])
-# print(id_sum_df.shape[0])
+# # generate a vector of probabilities
+# def calculate_alleles_probabilities(alleles_count):
+#     probs = np.random.uniform(0.0, 2.0, size=alleles_count)
+#     probs = softmax_1d(probs)
+#     return probs
 #
-# i_j_probability_B_df = pd.read_csv(f'data/real_data_test/levels/B/races/{race}/id_allele1_allele2_probability',
-#                                  dtype={'id': str, 'allele_1': int, 'allele_2': int, 'probability': float})
-# print(i_j_probability_B_df.shape[0])
-
-# first read all the rows and get indices of ids and alleles and amounts
-# with open('profiles1.csv', encoding="utf8") as infile:
-#     reader = csv.reader(infile)
-#     lst = next(reader)
 #
-#     name_col = lst[0]
-#     age_col = lst[1]
-#     country_col = lst[2]
+# # returns the index of element closest to target.
+# # cdf=[p1, p1+p2, ..., 1]
+# def binary_search(cdf, target: float = 0):
+#     # for i in range(len(cdf)):
+#     #     if cdf[i][0] >= target:
+#     #         return i
+#     start = 0
+#     end = len(cdf)
+#     while start < end:
+#         mid = (end + start) // 2
+#         # print(f'start: {start}. mid: {mid}. end: {end}')
+#         if cdf[mid] < target:
+#             start = mid + 1
+#         else:
+#             end = mid
+#     # now start and end pointing to the elements closest to 0
+#     # pick the index of the closer one
+#     return start
 #
-# df = pd.read_csv('profiles1.csv',
-#                  dtype={name_col: str, age_col: int, country_col: str})
-# id_col = df.columns[0]
-# df = df.sort_values(by=id_col)
-# print(df.loc[0])
-# print(df.columns[0])
-
-level = 'A'
-race = 'HIS'
-from models import chi_squared
-real_data_path = 'data/real_data_test'
-probabilities_path = f'{real_data_path}/levels/{level}/races/{race}/id_allele1_allele2_probability'
-
-id_to_index = {}
-allele_to_index = {}
-# first read all the rows and get indices of ids and alleles and amounts
-with open(probabilities_path, encoding="utf8") as infile:
-    for index, line in enumerate(infile):
-        # header
-        if index == 0:
-            continue
-        if index % 10000 == 0:
-            print(f'row: {index}, level: {level}, race: {race}, preprocessing')
-        lst = line.strip('\n').split(',')
-
-        id = lst[0]
-        allele_1 = int(lst[1])
-        allele_2 = int(lst[2])
-        probability = float(lst[3])
-
-        if id not in id_to_index:
-            id_to_index[id] = len(id_to_index)
-
-        if allele_1 not in allele_to_index:
-            allele_to_index[allele_1] = len(allele_to_index)
-        if allele_2 not in allele_to_index:
-            allele_to_index[allele_2] = len(allele_to_index)
-
-# first read all the rows and get indices of ids and alleles and amounts
-# for index, row in df_id_allele1_allele2_prob.iterrows():
-#     if index % 10000 == 0:
-#         print(f'row: {index}, level: {level}, race: {race}, preprocessing')
-#     id = row['id']
-#     allele_1 = row['allele_1']
-#     allele_2 = row['allele_2']
-#     probability = row['probability']
 #
-#     if id not in id_to_index:
-#         id_to_index[id] = len(id_to_index)
+# def get_cdf(probabilities):
+#     cdf = np.zeros(shape=len(probabilities))
+#     current_sum = 0.0
+#     for i in range(len(probabilities)):
+#         current_sum += probabilities[i]
+#         cdf[i] = current_sum
+#     return cdf
 #
-#     if allele_1 not in allele_to_index:
-#         allele_to_index[allele_1] = len(allele_to_index)
-#     if allele_2 not in allele_to_index:
-#         allele_to_index[allele_2] = len(allele_to_index)
+#
+# # given cdf and k (amount to sample), sample k indices from cdf
+# def sample_from_cdf(cdf, k=1):
+#     indices = []
+#     uniforms = np.random.uniform(0, 1, size=k)  # sample k U[0,1) random variables
+#     for i in range(k):
+#         index = binary_search(cdf=cdf, target=uniforms[i])
+#         indices.append(index)
+#     return indices
+#
+#
+# alleles_count = 1000
+# population_amount = 1000000
+# alpha_val = 0.96
+# uncertainty_val = 0.2
+# # probabilities {p(i)}
+# # print('calculating {p(i)}')
+# alleles_probabilities = calculate_alleles_probabilities(alleles_count)
+# # print('calculating {p(i,j)}')
+# probabilities = np.zeros(shape=(alleles_count, alleles_count))
+# for t in range(alleles_count):
+#     for m in range(t, alleles_count):
+#         if t == m:
+#             probabilities[t, m] = (1 - alpha_val) * alleles_probabilities[t] + alpha_val * (
+#                     alleles_probabilities[m] ** 2)
+#         else:
+#             # we don't multiply by 2 here yet
+#             probabilities[t, m] = alpha_val * alleles_probabilities[t] * alleles_probabilities[m]
+#             probabilities[m, t] = alpha_val * alleles_probabilities[t] * alleles_probabilities[m]
+#
+# # print('sampling alleles')
+# # matrix where every row is the alleles for a person
+# alleles_individuals = np.zeros(
+#     (population_amount, 2), dtype=np.int32)
+#
+# # print(f'alleles: {alleles_probabilities}')
+# # print(f' marginal: {marginal_probabilities}')
+#
+# # 1) assignment of alleles with certainty
+# probabilities_list = probabilities.flatten()
+# cdf_list = get_cdf(probabilities_list)
+# print('sampling indices')
+# start_time = time.time()
+# # for each donor, sample (i, j) according to {p(i,j)}
+# indices = sample_from_cdf(cdf=cdf_list, k=population_amount)
+# end_time = time.time()
+# print(f'time elapsed: {end_time - start_time}')
+# print('sampling indices using random')
+# start_time = time.time()
+# choices = random.choices(population=range(len(probabilities_list)), weights=probabilities_list, k=population_amount)
+# end_time = time.time()
+# print(f'time elapsed: {end_time - start_time}')
+# print('appending incides')
+# for k in range(population_amount):
+#     # notice the alleles i != j have probability 2 * p(i,j)
+#     index = indices[k]
+#     # the right allele of this index element
+#     col = index % alleles_count
+#     # the left allele
+#     row = (index - col) // alleles_count
+#     # making sure i <= j
+#     row, col = min(row, col), max(row, col)
+#     # assignment of the alleles to the person
+#     alleles_individuals[k, :] = [row, col]
 
-alleles_count = len(allele_to_index)
-population_amount = len(id_to_index)
-
-# {p(i)}
-alleles_probabilities = np.zeros(alleles_count)
-
-# {p(i, j)}
-observed_probabilities = np.zeros(shape=(alleles_count, alleles_count))
-
-# correction matrix
-correction = np.zeros(shape=(alleles_count, alleles_count))
-
-# calculate {p_k(i,j)}
-with open(probabilities_path, encoding="utf8") as infile:
-    for index, line in enumerate(infile):
-        if index == 0:
-            continue
-
-        if index % 10000 == 0:
-            print(f'row: {index}, level: {level}, race: {race}, After preprocessing')
-        lst = line.strip('\n').split(',')
-
-        id = lst[0]
-        allele_1 = int(lst[1])
-        allele_2 = int(lst[2])
-        probability = float(lst[3])
-
-        id_index = id_to_index[id]
-
-        allele_1_index = allele_to_index[allele_1]
-        allele_2_index = allele_to_index[allele_2]
-
-        alleles_probabilities[allele_1_index] += 0.5 * probability
-        alleles_probabilities[allele_2_index] += 0.5 * probability
-
-        observed_probabilities[allele_1_index, allele_2_index] += probability
-
-        correction[allele_1_index, allele_2_index] += (probability ** 2)
-
-alleles_probabilities /= population_amount
-
-for i in range(alleles_count):
-    for j in range(alleles_count):
-        observed_probabilities[i, j] /= population_amount
-        if observed_probabilities[i, j] == 0:
-            correction[i, j] = 1.0
-        else:
-            correction[i, j] /= (population_amount * observed_probabilities[i, j])
-
-min_i = 0
-min_j = 0
-min_corr = correction[0, 0]
-
-for i in range(alleles_count):
-    for j in range(i, alleles_count):
-        expected = population_amount * alleles_probabilities[i] * alleles_probabilities[j]
-        if i != j:
-            expected *= 2
-        if expected >= 2.0 and correction[i, j] < min_corr:
-            min_corr = correction[i, j]
-            min_i = i
-            min_j = j
-
-print(min_i)
-print(min_j)
-
-expected = population_amount * alleles_probabilities[min_i] * alleles_probabilities[min_j]
-observed = population_amount * observed_probabilities[min_i, min_j]
-
-print(f'corr: {min_corr}, expected: {expected}, observed: {observed}')
+# print('calculating uncertainties')
+# choices = random.choices(population=[0, 1], weights=[uncertainty_val, 1 - uncertainty_val], k=population_amount)
+# print('adding uncertainties')
+# data = []
+# # adding uncertainty to our model
+# for k in range(population_amount):
+#     # person k has alleles j,l
+#     j, l = alleles_individuals[k]
+#     j, l = min(j, l), max(j, l)
+#
+#     # choice whether this person will have uncertain alleles
+#     choice = choices[k]
+#
+#     # this person has certain alleles
+#     if choice == 1:
+#         # all_probabilities[j, l, k] = 1.0
+#         # writer.writerow([k, j, l, 1.0])
+#         data.append([k, j, l, 1.0])
+#     # this person has uncertain alleles
+#     if choice == 0:
+#         # all_probabilities[:, :, k] = probabilities
+#         # sample 10 indices from cdf
+#         indices_uncertainty = sample_from_cdf(cdf=cdf_list, k=10)
+#         # matrix where each row represents alleles (i, j)
+#         alleles_uncertainty = np.zeros(shape=(len(indices_uncertainty), 2))
+#         probabilities_uncertainty = np.zeros(shape=len(indices_uncertainty))
+#         for i in range(len(indices_uncertainty)):
+#             index = indices[i]
+#             # the right allele of this index element
+#             col = index % alleles_count
+#             # the left allele
+#             row = (index - col) // alleles_count
+#             # making sure i <= j
+#             row, col = min(row, col), max(row, col)
+#             # adding uncertain alleles to the person
+#             alleles_uncertainty[i, :] = [row, col]
+#             # getting the probability
+#             probability = probabilities[row, col]
+#             if row != col:
+#                 probability *= 2
+#             # adding the weight of the uncertain alleles
+#             probabilities_uncertainty[i] = probability
+#
+#         # normalizing the uncertain observations of current person into probabilities
+#         probabilities_uncertainty = probabilities_uncertainty / np.sum(probabilities_uncertainty)
+#
+#         # appending uncertain observations to current person
+#         for i in range(len(indices_uncertainty)):
+#             data.append([k,
+#                          alleles_uncertainty[i, 0],
+#                          alleles_uncertainty[i, 1],
+#                          probabilities_uncertainty[i]])
+arr = [5,2,3]
+print(arr[:2])

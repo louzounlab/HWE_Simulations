@@ -5,16 +5,16 @@ import utils
 current_path = os.getcwd()
 
 # -> make directory: data -> real_data -> levels
-levels_path = os.path.join(current_path, "data", "real_data_test", "levels")
+levels_path = os.path.join(current_path, "data", "hla_data_21_populations", "levels")
 if not os.path.exists(levels_path):
     os.makedirs(levels_path)
 
 # get levels and races from utils file
 levels_set = utils.LEVELS_SET
-races_set = utils.RACES_SET
+races_set = utils.RACES_21_SET
 
 # create data -> real_data_ races -> {race}
-races_path = os.path.join(current_path, "data", "real_data_test", "races")
+races_path = os.path.join(current_path, "data", "hla_data_21_populations", "races")
 if not os.path.exists(races_path):
     os.makedirs(races_path)
 for race in races_set:

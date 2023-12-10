@@ -148,6 +148,13 @@ def run_experiment(alleles_count, population_amount, alpha_val, uncertainty_val,
 
     observations = observed_probabilities * population_amount
 
+    # we need to calculate alleles probabilities (from observations)
+    alleles_probabilities = np.zeros(alleles_count)
+    for i in range(alleles_count):
+        for j in range(i, alleles_count):
+            alleles_probabilities[i] += 0.5 * observed_probabilities[i, j]
+            alleles_probabilities[j] += 0.5 * observed_probabilities[i, j]
+
     # sum_observed = 0.0
     # for k in range(alleles_count):
     #     for j in range(k, alleles_count):
@@ -222,6 +229,7 @@ def run_experiment(alleles_count, population_amount, alpha_val, uncertainty_val,
             variance = calc_variance(input_list=probabilities_list,
                                      input_mean=mean_value)
             variances_[t, m] = variance
+    # print(variances_)
 
     chi_squared_stat_sampling = calculate_chi_squared_value(counts_expected_=counts_expected,
                                                             counts_observed_=observations,

@@ -10,8 +10,8 @@ ax.set_axisbelow(True)
 
 warnings.filterwarnings("error")
 
-num_of_experiments = 300  # 500 amount of experiments for each alpha ranging from zero to one
-alleles_amount = 5  # 2
+num_of_experiments = 1000  # 500 amount of experiments for each alpha ranging from zero to one
+alleles_amount = 10  # 2
 population_size = 2000  # 35
 interval_for_alpha = 0.04  # 0.02
 # uncertainty = 0.2

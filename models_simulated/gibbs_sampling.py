@@ -246,13 +246,13 @@ def perform_experiment(alleles_count,
     # now we have the list of probabilities. check if 95% of the elements (sum of deltas) are bigger than 1.
     sum_current = 0
     bigger_counter = 0
-    # start_from = 10000
-    start_from = utils_with_certainty.calculate_start_time(alleles_count=alleles_count,
-                                                           population_amount=population_amount_calculated,
-                                                           alleles_probabilities=alleles_probabilities,
-                                                           observed=observed,
-                                                           observed_cdf=observed_cdf,
-                                                           iterations=iterations)
+    start_from = 30000
+    # start_from = utils_with_certainty.calculate_start_time(alleles_count=alleles_count,
+    #                                                        population_amount=population_amount_calculated,
+    #                                                        alleles_probabilities=alleles_probabilities,
+    #                                                        observed=observed,
+    #                                                        observed_cdf=observed_cdf,
+    #                                                        iterations=iterations)
 
     values = []
 
@@ -319,6 +319,7 @@ def full_algorithm(observations):
             else:
                 probability += observations[min(i, j), max(i, j)] * 0.5
         alleles_probabilities[i] = probability / population_amount
+    # print(f'SUM: {np.sum(alleles_probabilities)}')
 
     probabilities = np.zeros(shape=(alleles_count, alleles_count))
     for i in range(alleles_count):

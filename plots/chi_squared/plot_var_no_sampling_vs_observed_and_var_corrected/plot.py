@@ -99,6 +99,13 @@ def run_experiment(alleles_count, population_amount, alpha_val, uncertainty_val,
 
     observations = observed_probabilities * population_amount
 
+    # we need to calculate alleles probabilities (from observations)
+    alleles_probabilities = np.zeros(alleles_count)
+    for i in range(alleles_count):
+        for j in range(i, alleles_count):
+            alleles_probabilities[i] += 0.5 * observed_probabilities[i, j]
+            alleles_probabilities[j] += 0.5 * observed_probabilities[i, j]
+
     correction_vector = []
     variance_no_sampling_vector = []
 
@@ -132,6 +139,8 @@ def run_experiment(alleles_count, population_amount, alpha_val, uncertainty_val,
     list_values = variance_no_sampling_vector + observations_vector + correction_vector
     min_val = min(list_values)
     max_value = max(list_values)
+
+    print(variance_no_sampling_vector)
 
     plt.scatter(variance_no_sampling_vector, observations_vector, label='OBSERVED', color='deeppink')
     plt.scatter(variance_no_sampling_vector, correction_vector, label='VAR CORRECTED', color='slategrey')

@@ -16,9 +16,12 @@ if __name__ == '__main__':
     times_100m = df_times['100000000'].to_list()
 
     plt.figure(figsize=(9, 6))
-    plt.plot(alleles, times_1m, '-o', label='1M population size', color='slategrey')
-    plt.plot(alleles, times_10m, '-o', label='10M population size', color='limegreen')
-    plt.plot(alleles, times_100m, '-o', label='100M population size', color='deeppink')
+    # plt.plot(alleles, times_1m, '-o', label='1M population size', color='slategrey')
+    # plt.plot(alleles, times_10m, '-o', label='10M population size', color='limegreen')
+    # plt.plot(alleles, times_100m, '-o', label='100M population size', color='deeppink')
+    plt.plot(alleles, times_1m, label='1M population size', color='black')
+    plt.plot(alleles, times_10m, '-o', label='10M population size', color='black')
+    plt.plot(alleles, times_100m, '-*', label='100M population size', color='black')
 
     plt.xlabel('Alleles amounts', fontsize=18)
     plt.ylabel('Elapsed time in seconds', fontsize=18)
@@ -33,5 +36,5 @@ if __name__ == '__main__':
     # plt.ylim(0.0, 1.0)
     # plt.title('D', weight='bold', fontsize=20)
     plt.legend(fontsize=14)
-    plt.savefig('df_times.png', pad_inches=0.2, bbox_inches="tight")
+    plt.savefig('df_times.svg', pad_inches=0.2, bbox_inches="tight")
     plt.show()
