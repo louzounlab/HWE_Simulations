@@ -35,5 +35,5 @@ if __name__ == '__main__':
     print(chi_squared_results)
     plt.xlim(0.0, 1.0)
     plt.ylim(0.0, 1.0)
-    plt.savefig('snipping_data_plot.png', pad_inches=0.2, bbox_inches="tight")
+    plt.savefig('snipping_data_plot.pdf', format='pdf', bbox_inches="tight")
     plt.show()

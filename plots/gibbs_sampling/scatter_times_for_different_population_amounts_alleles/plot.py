@@ -36,5 +36,5 @@ if __name__ == '__main__':
     # plt.ylim(0.0, 1.0)
     # plt.title('D', weight='bold', fontsize=20)
     plt.legend(fontsize=14)
-    plt.savefig('df_times.svg', pad_inches=0.2, bbox_inches="tight")
+    plt.savefig('df_times.pdf', format='pdf', bbox_inches="tight")
     plt.show()

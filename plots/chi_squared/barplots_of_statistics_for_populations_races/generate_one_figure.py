@@ -13,7 +13,7 @@ def plot_subfigure(index, row, col):
 
 
 if __name__ == '__main__':
-    sns.set()
+    sns.set_style('white')
     plt.rcParams["font.family"] = "Arial"
 
     levels_list = utils.LEVELS_LIST

@@ -41,5 +41,5 @@ if __name__ == '__main__':
     plt.ylabel('Population amounts', fontsize=18)
     # plt.title('P-values')
     # plt.title('C', weight='bold', fontsize=20)
-    plt.savefig('df_p_values.png', pad_inches=0.2, bbox_inches="tight")
+    plt.savefig('heatmap_populations_alphas.pdf', format='pdf', bbox_inches="tight")
     plt.show()
