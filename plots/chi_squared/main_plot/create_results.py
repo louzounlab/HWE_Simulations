@@ -17,8 +17,6 @@ def save_results(alleles_amount, population_size, num_of_experiments, alpha_vals
 
     for i in range(len(alpha_vals)):
         for j in range(len(uncertainty_vals)):
-            print(f'population size: {population_size}, alleles amount: {alleles_amount}, alpha: {alpha_vals[i]}, '
-                  f'uncertainty: {uncertainty_vals[j]}')
             results_old_list = []
             results_correction_list = []
 
@@ -26,7 +24,8 @@ def save_results(alleles_amount, population_size, num_of_experiments, alpha_vals
 
             for experiment in range(num_of_experiments):
                 # if experiment % 100 == 0:
-                print(experiment)
+                print(f'experiment: {experiment}, population size: {population_size}, alleles amount: {alleles_amount}, alpha: {alpha_vals[i]}, '
+                      f'uncertainty: {uncertainty_vals[j]}')
                 print('generating data')
                 data = chi_squared_second_attempt.generate_data(alleles_count=alleles_amount,
                                                                 population_amount=population_size,
@@ -72,12 +71,12 @@ if __name__ == '__main__':
     warnings.filterwarnings("error")
 
     experiments_amount = 1000
-    alleles_amounts = [500, 10, 15, 20, 25, 30]  # 2
-    population_sizes = [100000, 1000, 1500, 2000, 2500, 3000]  # 35
+    alleles_amounts = [50, 100, 200, 500]  # 2
+    population_sizes = [50000, 100000, 100000, 100000]  # 35
 
     interval_for_alpha = 0.04  # 0.02
     # uncertainty = 0.2
-    uncertainty_values = [0.2, 0.1, 0.2, 0.4]
+    uncertainty_values = [0.0, 0.1, 0.2, 0.4]
 
     alpha_values = np.arange(start=0.92, stop=1 + interval_for_alpha,
                              step=interval_for_alpha)  # start, stop, step

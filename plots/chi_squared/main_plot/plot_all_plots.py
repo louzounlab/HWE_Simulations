@@ -95,8 +95,8 @@ if __name__ == '__main__':
     plt.rcParams["font.family"] = "Arial"
     # plt.figure(figsize=(9, 10))
     titles = ['A', 'B', 'C', 'D']
-    alleles_amounts = [10, 15, 20, 25]  # 2
-    population_sizes = [1000, 1000, 1000, 1000]  # 35
+    alleles_amounts = [50, 100, 200, 500]  # 2
+    population_sizes = [50000, 100000, 100000, 100000]  # 35
 
     file_paths = []
     for i in range(len(alleles_amounts)):
@@ -106,7 +106,7 @@ if __name__ == '__main__':
 
     # first plot should take the first row
     # plt.subplot(2, 2, 1)
-    fig = plt.figure(figsize=(14, 14), layout="constrained")
+    fig = plt.figure(figsize=(14, 14))
     gs = GridSpec(2, 2, figure=fig)
 
     # plot the other subplots
