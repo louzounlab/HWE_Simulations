@@ -258,4 +258,5 @@ def run_experiment(data, cutoff_value=0.0):
 
     p_value_new = 1 - stats.chi2.cdf(x=chi_squared_stat_new,
                                      df=dof_new)
+    # return int(p_value_old < 0.05), int(p_value_new < 0.05)
     return int(p_value_old < 0.05), int(p_value_new < 0.05)
