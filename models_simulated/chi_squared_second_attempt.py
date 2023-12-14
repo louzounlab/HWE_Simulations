@@ -39,7 +39,7 @@ def calculate_chi_squared_value(alleles_amount, population_amount_, alleles_prob
                 variance_val = expected_val * correction_val
             else:
                 variance_val = expected_val
-            if variance_val < cutoff:
+            if expected_val < cutoff:
                 amount_of_small_expected_ += 1
                 continue
             value += ((expected_val - observed_val) ** 2) / variance_val
@@ -333,8 +333,8 @@ def run_experiment(data, cutoff_value=0.0):
 
     p_value_new = 1 - stats.chi2.cdf(x=chi_squared_stat_new,
                                      df=dof_new)
-    # return int(p_value_old < 0.05), int(p_value_new < 0.05)
-    return p_value_old, p_value_new, dof_old, dof_new
+    return int(p_value_old < 0.05), int(p_value_new < 0.05)
+    # return p_value_old, p_value_new, dof_old, dof_new
 
 
 # given data: list of lists, run Traditional Chi Squared and Asta and return both significance result.
@@ -342,6 +342,8 @@ def plot_variance_vs_corrected_variance(data):
     id_to_index = {}
     allele_to_index = {}
     index_to_allele = {}
+    # set of (i, j)
+    ij_set = set()
     # index1_index2 -> [obs_prob, corr]
 
     # id -> {'i_j' -> [i, j, O_k(i,j)], ...}
@@ -375,6 +377,8 @@ def plot_variance_vs_corrected_variance(data):
         j = allele_to_index[allele_2]
         i, j = min(i, j), max(i, j)
         i_j = f'{i}_{j}'
+        if (i, j) not in ij_set:
+            ij_set.add((i, j))
         # update dictionary
         if id_row not in id_to_i_j_to_i_j_observation:
             id_to_i_j_to_i_j_observation[id_row] = {i_j: [i, j, observation]}
@@ -430,24 +434,48 @@ def plot_variance_vs_corrected_variance(data):
                 correction[i, j] = 1.0
             else:
                 correction[i, j] /= (population_amount * observed_probabilities[i, j])
-    expected_vecter = []
     expected_corrected_vector = []
-    for i in range(alleles_count):
-        for j in range(i, alleles_count):
-            expected = population_amount * alleles_probabilities[i] * alleles_probabilities[j]
-            if i != j:
-                expected *= 2
-            expected_corrected = expected * correction[i, j]
-            if expected_corrected < 2.0:
-                continue
-            expected_vecter.append(expected)
-            expected_corrected_vector.append(expected_corrected)
-    plt.scatter(expected_corrected_vector, expected_vecter, color='deeppink')
-    max_val = max(expected_corrected_vector + expected_vecter)
-    min_val = min(expected_corrected_vector + expected_vecter)
+    variance_vector = []
+    # for i in range(alleles_count):
+    #     for j in range(i, alleles_count):
+    #         expected = population_amount * alleles_probabilities[i] * alleles_probabilities[j]
+    #         if i != j:
+    #             expected *= 2
+    #         expected_corrected = expected * correction[i, j]
+    #         # if expected_corrected < 2.0:
+    #         #     continue
+    #         expected_corrected_vector.append(expected_corrected)
+    index = 0
+    for (i, j) in ij_set:
+        print(f'loop: {index} / {len(ij_set)}')
+        index += 1
+        values_for_variance = []
+        expected = population_amount * alleles_probabilities[i] * alleles_probabilities[j]
+        if i != j:
+            expected *= 2
+        expected_corrected = expected * correction[i, j]
+        # if expected_corrected < 2.0:
+        #     continue
+        expected_corrected_vector.append(expected_corrected)
+        i_j = f'{i}_{j}'
+        for current_id in id_to_i_j_to_i_j_observation:
+            # for each id get the i_j observation, if not exists, get zero instead
+            if i_j not in id_to_i_j_to_i_j_observation[current_id]:
+                values_for_variance.append(0.0)
+            else:
+                values_for_variance.append(id_to_i_j_to_i_j_observation[current_id][i_j][2])
+        mean_val = np.mean(values_for_variance)
+        var_val = 0.0
+        for element in values_for_variance:
+            var_val += ((element - mean_val) ** 2)
+        variance_vector.append(var_val)
+
+    plt.scatter(expected_corrected_vector, variance_vector, color='deeppink')
+    max_val = max(expected_corrected_vector + variance_vector)
+    min_val = min(expected_corrected_vector + variance_vector)
     plt.xlim([min_val, max_val])
     plt.ylim([min_val, max_val])
     plt.xlabel('Expected * Corrected')
-    plt.ylabel('Expected')
+    plt.ylabel('Variance of (i,j) over {O_k(i,j)}_k')
     plt.show()
 
