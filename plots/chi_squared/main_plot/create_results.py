@@ -39,17 +39,23 @@ def save_results(alleles_amount, population_size, num_of_experiments, alpha_vals
                                                                 alleles_probabilities=alleles_probabilities,
                                                                 alpha_val=alpha_vals[i],
                                                                 uncertainty_val=uncertainty_vals[j])
+                chi_squared_second_attempt.plot_variance_vs_corrected_variance(data=data)
                 # print(len(data))
                 print('running test')
-                result_old, result_new = chi_squared_second_attempt.run_experiment(data=data,
-                                                                                   cutoff_value=2.0)
+                result_old, result_new, dof_old, dof_new = chi_squared_second_attempt.run_experiment(data=data,
+                                                                                                     cutoff_value=2.0)
+                print(f'old test: population: {population_size}, alleles amount: {alleles_amount}')
+                print(f'p_value: {result_old}, dof: {dof_old}')
+                print('--------------')
+                print(f'new test: population: {population_size}, alleles amount: {alleles_amount}')
+                print(f'p_value: {result_new}, dof: {dof_new}')
                 with open('data.csv', 'w', newline='') as file:
                     writer = csv.writer(file)
                     for line in data:
                         writer.writerow(line)
                 p_val, _, _ = asta.full_algorithm(file_path='data.csv',
                                                   cutoff_value=2.0)
-                result_asta = int(p_val < 0.05)
+                result_asta = p_val
                 print(f'')
                 results_old_list.append(result_old)
                 results_correction_list.append(result_new)
@@ -77,7 +83,7 @@ def save_results(alleles_amount, population_size, num_of_experiments, alpha_vals
     current_path = os.getcwd()
 
     # -> make directory: data -> real_data -> levels
-    path_to_save = os.path.join(current_path, f'population_{population_size}_alleles_{alleles_amount}')
+    path_to_save = os.path.join(current_path, f'population_{population_size}_alleles_{alleles_amount}_p_values')
     if not os.path.exists(path_to_save):
         os.makedirs(path_to_save)
 
@@ -95,11 +101,11 @@ def save_results(alleles_amount, population_size, num_of_experiments, alpha_vals
 if __name__ == '__main__':
     warnings.filterwarnings("error")
 
-    experiments_amount = 1000
+    experiments_amount = 1
     # alleles_amounts = [50, 100, 200, 500]  # 2
     # population_sizes = [50000, 100000, 100000, 100000]  # 35
-    alleles_amounts = [5]  # 2
-    population_sizes = [1000]  # 35
+    alleles_amounts = [500]  # 2
+    population_sizes = [500000]  # 35
 
     interval_for_alpha = 0.04  # 0.02
     # uncertainty = 0.2
@@ -108,6 +114,9 @@ if __name__ == '__main__':
     alpha_values = np.arange(start=0.92, stop=1 + interval_for_alpha,
                              step=interval_for_alpha)  # start, stop, step
     alpha_values = np.array([round(alpha, 2) for alpha in alpha_values])
+
+    alpha_values = [1.0]
+    uncertainty_values = [0.4]
 
     for i_ in range(len(alleles_amounts)):
         alleles_amount_ = alleles_amounts[i_]
