@@ -48,11 +48,14 @@ def save_results(alleles_amount, population_size, num_of_experiments, alpha_vals
                 print(f'p_value_old: {result_old}, dof_old: {dof_old}')
                 print('--------------')
                 print(f'p_value_corrected: {result_new}, dof_corrected: {dof_new}')
-                chi_squared_second_attempt.plot_variance_vs_corrected_variance(data=data)
-                # with open('data.csv', 'w', newline='') as file:
-                #     writer = csv.writer(file)
-                #     for line in data:
-                #         writer.writerow(line)
+                # chi_squared_second_attempt.plot_variance_vs_corrected_variance(data=data)
+                with open('data.csv', 'w', newline='') as file:
+                    writer = csv.writer(file)
+                    for line in data:
+                        writer.writerow(line)
+                asta.full_algorithm(file_path='data.csv',
+                                    cutoff_value=2.0,
+                                    should_save_csv='simulation_data')
                 # p_val, _, _ = asta.full_algorithm(file_path='data.csv',
                 #                                   cutoff_value=2.0)
                 result_asta = 0
@@ -104,8 +107,8 @@ if __name__ == '__main__':
     experiments_amount = 1
     # alleles_amounts = [50, 100, 200, 500]  # 2
     # population_sizes = [50000, 100000, 100000, 100000]  # 35
-    alleles_amounts = [50]  # 2
-    population_sizes = [50000]  # 35
+    alleles_amounts = [500]  # 2
+    population_sizes = [100000]  # 35
 
     interval_for_alpha = 0.04  # 0.02
     # uncertainty = 0.2

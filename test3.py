@@ -5,7 +5,6 @@ import os
 import csv
 import time
 
-
 # # assuming x is 2-dimensional
 # def softmax_1d(x):
 #     sum = 0.0
@@ -166,5 +165,23 @@ import time
 #                          alleles_uncertainty[i, 0],
 #                          alleles_uncertainty[i, 1],
 #                          probabilities_uncertainty[i]])
-arr = [5,2,3]
-print(arr[:2])
+
+
+def index_to_indices(idx, mat):
+    rows = mat.shape[0]
+    cols = mat.shape[1]
+
+    col = idx % cols
+    row = (idx - col) // rows
+    print(f'{row}, {col}')
+
+
+z = np.array([[4, 5, 6], [1, 8, 3]])
+z_flat = z.flatten()
+print(len(z_flat))
+print(z_flat)
+print((-z_flat).argsort())
+print(f'largest index: {(-z_flat).argsort()[0]}')
+print('largest indices:')
+
+index_to_indices((-z_flat).argsort()[0], z)

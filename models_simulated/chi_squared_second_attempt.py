@@ -2,12 +2,14 @@ import random
 import numpy as np
 import scipy.stats as stats
 from matplotlib import pyplot as plt
-import os
-import csv
 
 
-# assuming x is 2-dimensional
 def softmax_1d(x):
+    """
+    Performs a softmax on a given numpy array x
+    :param x: 1 dimensional numpy array
+    :return: probabilities
+    """
     sum = 0.0
     for row in range(x.shape[0]):
         sum += np.exp(x[row])
@@ -15,7 +17,12 @@ def softmax_1d(x):
 
 
 # generate a vector of probabilities
-def calculate_alleles_probabilities(alleles_count):
+def generate_alleles_probabilities(alleles_count):
+    """
+    Generate probabilities {p(i)}
+    :param alleles_count: Amount of alleles
+    :return: probabilities
+    """
     probs = np.random.uniform(0.0, 2.0, size=alleles_count)
     probs = softmax_1d(probs)
     return probs
@@ -46,16 +53,19 @@ def calculate_chi_squared_value(alleles_amount, population_amount_, alleles_prob
     return value, amount_of_small_expected_
 
 
-def generate_alleles_probabilities(alleles_count):
-    return calculate_alleles_probabilities(alleles_count)
-
-
 # generate simulated data as a list of lists (every row is: [k, i, j, p_k(i,j)])
 def generate_data(alleles_count, population_amount, alleles_probabilities, alpha_val, uncertainty_val):
-    # print('generate probablities')
-    # probabilities {p(i)}
-    # alleles_probabilities = calculate_alleles_probabilities(alleles_count)
+    """
+    Generate a csv data simulation file
+    :param alleles_count: Amount of alleles
+    :param population_amount: Population size
+    :param alleles_probabilities: Numpy array of alleles probabilities {p(i)}
+    :param alpha_val: Float between 0.0 and 1.0, represents the closeness to HWE
+    :param uncertainty_val: Float between 0.0 and 1.0, represents the uncertainty of the generated data
+    :return: A csv file where every row represents: [id, first allele, second allele, probability]
+    """
 
+    # calculate probabilities {p(i,j)}
     probabilities = np.zeros(shape=(alleles_count, alleles_count))
     for t in range(alleles_count):
         for m in range(t, alleles_count):
@@ -67,16 +77,12 @@ def generate_data(alleles_count, population_amount, alleles_probabilities, alpha
                 probabilities[t, m] = alpha_val * alleles_probabilities[t] * alleles_probabilities[m]
                 probabilities[m, t] = alpha_val * alleles_probabilities[t] * alleles_probabilities[m]
 
-    # matrix where every row is the alleles for a person
+    # matrix 2 x N where every row contains the true alleles for a person
     alleles_individuals = np.zeros(
         (population_amount, 2), dtype=np.int32)
 
-    # print(f'alleles: {alleles_probabilities}')
-    # print(f' marginal: {marginal_probabilities}')
-
     # 1) assignment of alleles with certainty
     probabilities_list = probabilities.flatten()
-    # print('sample and append certain indices')
     indices = random.choices(population=range(len(probabilities_list)), weights=probabilities_list, k=population_amount)
     for k in range(population_amount):
         # notice the alleles i != j have probability 2 * p(i,j)
@@ -91,26 +97,32 @@ def generate_data(alleles_count, population_amount, alleles_probabilities, alpha
         alleles_individuals[k, :] = [row, col]
 
     data = []
-    # print('sample uncertain alleles')
+    # Vector of bernoulli's: for each person k, if choices[k] is 1 then this person will have uncertain alleles
     choices = random.choices(population=[0, 1], weights=[1 - uncertainty_val, uncertainty_val], k=population_amount)
+    # Calculate the amount of donors with uncertain alleles
     sum_uncertain_donors = sum(choices)
+    # The amount of pairs we will sample for each donor with uncertain alleles
     observations_amount_for_uncertain_donor = 10
+    # Vector of size 10 * (amount of donors with uncertain alleles), every 10 values corresponds to an uncertain donor
     indices_uncertain = random.choices(population=range(len(probabilities_list)),
                                        weights=probabilities_list,
                                        k=observations_amount_for_uncertain_donor * sum_uncertain_donors)
+    # This represents the starting index for the next 10 values in the vector defined above
     current_uncertainty_index = 0
-    # print('append uncertain alleles')
+    # Go over all the donors and add uncertainty to the uncertain donors
     for k in range(population_amount):
-        # person k has alleles j,l
+        # person k has true alleles j,l
         j, l = alleles_individuals[k]
         j, l = min(j, l), max(j, l)
         # no uncertainty
         if choices[k] == 0:
             data.append([k, j, l, 1.0])
         else:
-            # matrix where each row represents alleles (i, j)
+            # matrix 2 x 10 where each row represents 10 pairs of alleles for person k
             alleles_uncertainty = np.zeros(shape=(observations_amount_for_uncertain_donor, 2), dtype=int)
+            # vector of probabilities for the uncertain paris of alleles for person k
             probabilities_uncertainty = np.zeros(shape=observations_amount_for_uncertain_donor)
+            # Assign the uncertain alleles and probabilities
             for t in range(observations_amount_for_uncertain_donor):
                 index = indices_uncertain[current_uncertainty_index + t]
                 # the right allele of this index element
@@ -329,11 +341,38 @@ def run_experiment(data, cutoff_value=0.0):
                                                                                      correction=correction,
                                                                                      cutoff=cutoff_value,
                                                                                      test_type=1)
+    difference_matrix = np.zeros(shape=(alleles_count, alleles_count))
+    for i in range(alleles_count):
+        for j in range(i, alleles_count):
+            mult = 1
+            if i != j:
+                mult = 2
+            expected_val = mult * population_amount * alleles_probabilities[i] * alleles_probabilities[j]
+            observed_val = population_amount * observed_probabilities[i, j]
+            correction_val = correction[i, j]
+            var_new = expected_val * correction_val
+            var_old = expected_val
+
+            i_j_new_stat = ((expected_val - observed_val) ** 2) / var_new
+            i_j_old_stat = ((expected_val - observed_val) ** 2) / var_old
+            if expected_val < cutoff_value:
+                continue
+            difference_matrix[i, j] = i_j_new_stat - i_j_old_stat
+    difference_flat = difference_matrix.flatten()
+    k_largest_indexes = (-difference_flat).argsort()[:5]
+    for i in range(len(k_largest_indexes)):
+        idx = k_largest_indexes[i]
+        col = idx % difference_matrix.shape[1]
+        row = (idx - col) // difference_matrix.shape[0]
+        print(f'alleles: {row}, {col}, difference: {difference_matrix[row, col]}')
+
     dof_new = couples_amount - amount_of_small_expected_new
 
     p_value_new = 1 - stats.chi2.cdf(x=chi_squared_stat_new,
                                      df=dof_new)
-    return int(p_value_old < 0.05), int(p_value_new < 0.05)
+    print(f'statistic old: {chi_squared_stat_old}, dof old: {dof_old}')
+    print(f'statistic new: {chi_squared_stat_new}, dof new: {dof_new}')
+    return int(p_value_old < 0.05), int(p_value_new < 0.05), dof_old, dof_new
     # return p_value_old, p_value_new, dof_old, dof_new
 
 
