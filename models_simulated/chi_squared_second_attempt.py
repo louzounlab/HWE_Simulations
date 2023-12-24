@@ -74,8 +74,8 @@ def generate_data(alleles_count, population_amount, alleles_probabilities, alpha
                         alleles_probabilities[m] ** 2)
             else:
                 # we don't multiply by 2 here yet
-                probabilities[t, m] = alpha_val * alleles_probabilities[t] * alleles_probabilities[m]
-                probabilities[m, t] = alpha_val * alleles_probabilities[t] * alleles_probabilities[m]
+                probabilities[t, m] = 2 * alpha_val * alleles_probabilities[t] * alleles_probabilities[m]
+                # probabilities[m, t] = alpha_val * alleles_probabilities[t] * alleles_probabilities[m]
 
     # matrix 2 x N where every row contains the true alleles for a person
     alleles_individuals = np.zeros(
@@ -135,13 +135,13 @@ def generate_data(alleles_count, population_amount, alleles_probabilities, alpha
                 alleles_uncertainty[t, :] = [row, col]
                 # getting the probability
                 probability = probabilities[row, col]
-                if row != col:
-                    probability *= 2
+                # if t < 0.5 * observations_amount_for_uncertain_donor:
+                #     probability *= 10000000
                 # adding the weight of the uncertain alleles
                 probabilities_uncertainty[t] = probability
 
             # normalizing the uncertain observations of current person into probabilities
-            probabilities_uncertainty = probabilities_uncertainty / np.sum(probabilities_uncertainty)
+            # probabilities_uncertainty = probabilities_uncertainty / np.sum(probabilities_uncertainty)
 
             # appending uncertain observations to current person
             for t in range(observations_amount_for_uncertain_donor):
@@ -359,7 +359,7 @@ def run_experiment(data, cutoff_value=0.0):
                 continue
             difference_matrix[i, j] = i_j_new_stat - i_j_old_stat
     difference_flat = difference_matrix.flatten()
-    k_largest_indexes = (-difference_flat).argsort()[:5]
+    k_largest_indexes = (-difference_flat).argsort()[:20]
     for i in range(len(k_largest_indexes)):
         idx = k_largest_indexes[i]
         col = idx % difference_matrix.shape[1]
@@ -372,8 +372,8 @@ def run_experiment(data, cutoff_value=0.0):
                                      df=dof_new)
     print(f'statistic old: {chi_squared_stat_old}, dof old: {dof_old}')
     print(f'statistic new: {chi_squared_stat_new}, dof new: {dof_new}')
-    return int(p_value_old < 0.05), int(p_value_new < 0.05), dof_old, dof_new
-    # return p_value_old, p_value_new, dof_old, dof_new
+    # return int(p_value_old < 0.05), int(p_value_new < 0.05), dof_old, dof_new
+    return p_value_old, p_value_new, dof_old, dof_new
 
 
 # given data: list of lists, run Traditional Chi Squared and Asta and return both significance result.

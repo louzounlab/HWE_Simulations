@@ -54,7 +54,7 @@ def save_results(alleles_amount, population_size, num_of_experiments, alpha_vals
                     for line in data:
                         writer.writerow(line)
                 asta.full_algorithm(file_path='data.csv',
-                                    cutoff_value=2.0,
+                                    cutoff_value=4.0,
                                     should_save_csv='simulation_data')
                 # p_val, _, _ = asta.full_algorithm(file_path='data.csv',
                 #                                   cutoff_value=2.0)
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     alpha_values = np.array([round(alpha, 2) for alpha in alpha_values])
 
     alpha_values = [1.0]
-    uncertainty_values = [0.4]
+    uncertainty_values = [0.1]
 
     for i_ in range(len(alleles_amounts)):
         alleles_amount_ = alleles_amounts[i_]
