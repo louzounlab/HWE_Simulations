@@ -5,6 +5,7 @@ import scipy.stats as stats
 
 alleles_count = 0
 max_allele = 0
+
 cut_off_value = 4.0
 file_path = 'simulation_data.csv'
 # first read all the rows and get indices of ids and alleles and amounts
@@ -52,3 +53,4 @@ print(dof_old)
 p_value_old = 1 - stats.chi2.cdf(x=statistic,
                                  df=dof_old)
 print(p_value_old)
+print(statistic)
