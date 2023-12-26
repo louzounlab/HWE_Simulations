@@ -6,6 +6,7 @@ import warnings
 from models_simulated import chi_squared_with_csv
 from models_simulated import chi_squared_second_attempt
 from hwetests import asta
+from hwetests import umat_with_uncertainty
 
 
 def save_results(alleles_amount, population_size, num_of_experiments, alpha_vals, uncertainty_vals):
@@ -43,7 +44,7 @@ def save_results(alleles_amount, population_size, num_of_experiments, alpha_vals
                 # print(len(data))
                 print('running test')
                 result_old, result_new, dof_old, dof_new = chi_squared_second_attempt.run_experiment(data=data,
-                                                                                                     cutoff_value=2.0)
+                                                                                                     cutoff_value=4.0)
                 print(f'alleles amount: {alleles_amount}, population: {population_size}')
                 print(f'p_value_old: {result_old}, dof_old: {dof_old}')
                 print('--------------')
@@ -53,9 +54,12 @@ def save_results(alleles_amount, population_size, num_of_experiments, alpha_vals
                     writer = csv.writer(file)
                     for line in data:
                         writer.writerow(line)
-                asta.full_algorithm(file_path='data.csv',
-                                    cutoff_value=4.0,
-                                    should_save_csv='simulation_data')
+                p, stat, _ = asta.full_algorithm(file_path='data.csv',
+                                                 cutoff_value=4.0,
+                                                 should_save_csv='simulation_data')
+                print(p, stat)
+                p_umat = umat_with_uncertainty.full_algorithm(file_path='data.csv')
+                print(f'p_umat: {p_umat}')
                 # p_val, _, _ = asta.full_algorithm(file_path='data.csv',
                 #                                   cutoff_value=2.0)
                 result_asta = 0
@@ -119,7 +123,7 @@ if __name__ == '__main__':
     alpha_values = np.array([round(alpha, 2) for alpha in alpha_values])
 
     alpha_values = [1.0]
-    uncertainty_values = [0.1]
+    uncertainty_values = [0.4]
 
     for i_ in range(len(alleles_amounts)):
         alleles_amount_ = alleles_amounts[i_]

@@ -138,7 +138,8 @@ def generate_data(alleles_count, population_amount, alleles_probabilities, alpha
                 # if t < 0.5 * observations_amount_for_uncertain_donor:
                 #     probability *= 10000000
                 # adding the weight of the uncertain alleles
-                probabilities_uncertainty[t] = probability
+                # TODO: changed from probability to 1.0
+                probabilities_uncertainty[t] = 1.0
 
             # normalizing the uncertain observations of current person into probabilities
             # probabilities_uncertainty = probabilities_uncertainty / np.sum(probabilities_uncertainty)
@@ -359,13 +360,13 @@ def run_experiment(data, cutoff_value=0.0):
                 continue
             difference_matrix[i, j] = i_j_new_stat - i_j_old_stat
     difference_flat = difference_matrix.flatten()
-    k_largest_indexes = (-difference_flat).argsort()[:20]
+    k_largest_indexes = (-difference_flat).argsort()[:5]
     for i in range(len(k_largest_indexes)):
         idx = k_largest_indexes[i]
         col = idx % difference_matrix.shape[1]
         row = (idx - col) // difference_matrix.shape[0]
         print(f'alleles: {row}, {col}, difference: {difference_matrix[row, col]}')
-
+    print('---------------------')
     dof_new = couples_amount - amount_of_small_expected_new
 
     p_value_new = 1 - stats.chi2.cdf(x=chi_squared_stat_new,
