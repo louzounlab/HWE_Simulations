@@ -45,7 +45,7 @@ for i in range(alleles_count):
         if expected[i, j] < cut_off_value:
             amount_of_small_expected += 1
             continue
-        statistic += ((observed[i, j] - expected[i, j]) ** 2 / (expected[i, j]) * rho[i, j])
+        statistic += ((observed[i, j] - expected[i, j]) ** 2 / ((expected[i, j]) * rho[i, j]))
 
 dof_old = couples_amount - amount_of_small_expected
 print(dof_old)
