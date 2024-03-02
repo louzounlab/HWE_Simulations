@@ -1,4 +1,0 @@
-In this plot we fix probabilities {p(i)}.
-Then we have a variance matrix {V(i,j)} according to the old chi-squared (in the first plot)
-and according to the new chi-squared (in the second plot).
-We run the simulation 1000 times and for every (i,j) calculate the variance over the experiments and also take the V(i,j) from the matrix -> this is one point in the plot. (after loglog scale)

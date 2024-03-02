@@ -1,1 +1,0 @@
-For every alpha and uncertainty we run the Chi-Squared 500 times and return the mean of significance results
